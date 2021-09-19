@@ -36,9 +36,6 @@
     - [[#aggresive-indent][Aggresive Indent]]
     - [[#yassnippets][Yassnippets]]
     - [[#nlinum][Nlinum]]
-    - [[#circe-irc][Circe (IRC)]]
-    - [[#erc-irc][ERC (IRC)]]
-    - [[#password-store][Password Store]]
     - [[#smartparens][Smartparens]]
     - [[#rainbow-mode][Rainbow Mode]]
     - [[#rainbow-delimiters][Rainbow-Delimiters]]
@@ -125,6 +122,11 @@ header-args :tangle yes
     #+BEGIN_SRC emacs-lisp
 (setq byte-compile-warnings '(not free-vars unresolved noruntime lexical make-local))
     #+END_SRC
+
+    Enable debugging
+    #+BEGIN_SRC emacs-lisp
+(eval-and-compile (setq debug-on-error t))
+#+END_SRC
 
 *** Package Management
 **** Package Settings
@@ -568,28 +570,6 @@ want is prioritized instead.
 		      "q" 'org-capture-finalize))
 #+END_SRC
 
-#+BEGIN_SRC emacs-lisp
-(use-package org-ref
-             :after general
-             :config
-             (setq
-              org-ref-default-bibliography '("~/research/bibliography.bib")
-              org-ref-pdf-directory "~/research/papers/"
-              org-ref-bibliography-notes "~/research/papers/papers.org"
-              bibtex-completion-bibliography '("~/research/bibliography.bib")
-              bibtex-completion-library-path "~/research/papers"
-              bibtex-completion-notes-path "~/research/papers/papers.org"
-              org-ref-completion-library 'org-ref-ivy-cite)
-
-             (setq bibtex-completion-notes-template-one-file "
-,* ${title} (${year}) [${author-or-editor}]
-  :PROPERTIES:
-  :Custom_ID: ${=key=}
-  :END:
-
-"))
-#+END_SRC
-
 Make latexpdf and beamer-pdf be one function
 #+BEGIN_SRC emacs-lisp
 (defun tpanum/org-to-pdf ()
@@ -616,13 +596,11 @@ Use ox-hugo for blogging
 
 #+BEGIN_SRC emacs-lisp
 (use-package company-org-block
-	     :load-path "lisp/pkgs"
-	     :hook ((org-mode . tpanum/org-mode-company-hook-function))
-	     :config
-	     (defun tpanum/org-mode-company-hook-function ()
-	       (setq-local company-begin-commands t)
-	       (setq-local company-backends '(company-org-block))
-	       (company-mode +1)))
+  :custom
+  (company-org-block-edit-style 'auto)
+  :hook ((org-mode . (lambda ()
+                       (setq-local company-backends '(company-org-block))
+                       (company-mode +1)))))
 #+END_SRC
 
 *** Toc-org
@@ -677,10 +655,6 @@ I replaced evil's default `/` with `swiper`.
 
               "q" 'kill-this-buffer
               "r"  '(:ignore t :which-key "Research")
-              "rad" 'doi-utils-add-bibtex-entry-from-doi
-              "ras" 'doi-utils-add-entry-from-crossref-query
-              "rc" 'org-ref-helm-insert-cite-link
-              "rw" 'helm-bibtex
               "wo" 'other-window
               "wd" 'delete-other-windows
               "wsh" 'split-window-right
@@ -761,192 +735,6 @@ Allow me to access ripgrep from find file.
              (setq nlinum-highlight-current-line t))
 #+END_SRC
 
-*** Circe (IRC)
-My IRC Configuration
-#+BEGIN_SRC emacs-lisp
-(use-package circe
-:config
-(defconst irc-left-padding 8 "Padding for nicks")
-(defconst irc-time-stamp-format "%H:%M")
-
-(require 'circe-color-nicks)
-(enable-circe-color-nicks)
-
-(require 'circe-lagmon)
-(circe-lagmon-mode)
-
-(setq
- circe-reduce-lurker-spam t
- circe-default-part-message "Bye"
- circe-default-quit-message "Bye"
- circe-color-nicks-everywhere t
- circe-format-say (format "{nick:+%ss} │ {body}" irc-left-padding)
- circe-format-self-say circe-format-say
- circe-format-action (format "{nick:+%ss} * {body}" irc-left-padding)
- circe-format-self-action circe-format-action
- circe-network-defaults ()
- circe-network-options
- `(("freenode"
-    :host "weechat.panum.dk"
-    :port 8000
-    :server-buffer-name "⇄ freenode"
-    :nick "tpanum"
-    :user "tpanum"
-    :pass weechat-relay-freenode-pass
-    :use-tls t
-    )
-   ("znc-bitlbee"
-    :host "znc.panum.dk"
-    :port 5000
-    :server-buffer-name "⇄ freenode"
-    :nick "tpanum"
-    :user "znc/freenode"
-    :pass personal-znc-pass
-    ;; :lagmon-disabled t
-    :tls t
-    )))
-
-(setq lui-fill-type nil)
-
-(add-hook 'circe-channel-mode-hook #'turn-on-visual-line-mode)
-
-(defvar irc-truncate-nick-char ?…
-  "Character to displayed when nick > `irc-left-padding' in length.")
-
-(defun irc-circe-truncate-nicks ()
-  "Truncate long nicknames in chat output non-destructively."
-  (when-let ((beg (text-property-any (point-min) (point-max) 'lui-format-argument 'nick)))
-    (goto-char beg)
-    (let ((end (next-single-property-change beg 'lui-format-argument))
-          (nick (plist-get (plist-get (text-properties-at beg) 'lui-keywords)
-                           :nick)))
-      (when (> (length nick) irc-left-padding)
-        (compose-region (+ beg irc-left-padding -1) end
-                        irc-truncate-nick-char)))))
-
-(add-hook 'lui-pre-output-hook 'irc-circe-truncate-nicks)
-
-(defun irc-init-lui-margins ()
-  "Fix margins for irc"
-  (setq lui-time-stamp-position 'right-margin
-        lui-time-stamp-format irc-time-stamp-format
-        right-margin-width (length (format-time-string lui-time-stamp-format))))
-
-(defun irc-init-lui-wrapping ()
-  "Fix wrapping for irc"
-  (interactive)
-  (setq fringes-outside-margins t
-        word-wrap t
-        wrap-prefix (concat (make-string (+ irc-left-padding 1) ? ) "│ ")))
-
-(add-hook 'lui-mode-hook 'irc-init-lui-wrapping)
-(add-hook 'lui-mode-hook 'irc-init-lui-margins))
-#+END_SRC
-
-Enable notifications
-#+BEGIN_SRC emacs-lisp
-(use-package circe-notifications
-:ensure t
-:config
-(setq
-circe-notifications-wait-for 2
-circe-notifications-JOIN nil
-circe-notifications-PART nil)
-(add-to-list 'circe-notifications-watch-strings "#slack-aau-ntp")
-(add-to-list 'circe-notifications-watch-strings "#slack-aau-backend")
-(add-to-list 'circe-notifications-watch-strings "#slack-aau-random")
-(add-to-list 'circe-notifications-watch-strings "#slack-aau-research")
-(add-hook 'circe-server-connected-hook 'tpanum/enable-circe-notifications))
-#+END_SRC
-**** Custom Notifications Function
-Delay the activation of notifications and create a custome display function which ignores znc playback
-#+BEGIN_SRC emacs-lisp
-(defun tpanum/enable-circe-notifications ()
-  "Turn on notifications."
-  (interactive)
-  (run-at-time "5sec" nil 'enable-circe-notifications))
-
-(defun circe-notifications-notify (nick body channel)
-  (if (and (not (string-match "^\[[0-9]+:[0-9]+\]" body)) ; make sure playback messages from znc are not displayed
-  (not (string-match "^\\\*\\\*\\\*$" nick))
-  (not (string-match "^/\\(PART\\|JOIN\\)" body)))
-      (alert
-       (concat "<b>" nick "</b>: " body)
-       :severity circe-notifications-alert-severity
-       :title channel
-       :category "chat"
-       :style circe-notifications-alert-style)))
-#+END_SRC
-
-**** Password Functions
-#+BEGIN_SRC emacs-lisp
-(defun weechat-relay-freenode-pass (server)
-  "Return the password for the `SERVER'."
-  (concat "freenode" ":" (password-store-get "personal/weechat-relay")))
-
-(defun personal-znc-pass (server)
-  "Return the password for the `SERVER'."
-  (concat "freenode" ":" (password-store-get "personal/znc")))
-#+END_SRC
-
-**** Start IRC Function
-#+BEGIN_SRC emacs-lisp
-(defun tpanum/irc ()
-  "Connect to IRC"
-  (interactive)
-  ;; (circe "znc-freenode")
-  (circe "znc-bitlbee"))
-#+END_SRC
-*** ERC (IRC)
-#+BEGIN_SRC emacs-lisp
-(use-package erc
-:after password-store
-  :custom
-  (erc-autojoin-timing 'ident)
-  (erc-fill-function 'erc-fill-static)
-  (erc-fill-static-center 14)
-  (erc-hide-list '("JOIN" "PART" "QUIT"))
-  (erc-lurker-hide-list '("JOIN" "PART" "QUIT"))
-  (erc-lurker-threshold-time 43200)
-  (erc-prompt-for-nickserv-password nil)
-  (erc-server-reconnect-attempts 20)
-  (erc-server-reconnect-timeout 5)
-  (erc-prompt "   >")
-(erc-notifications-icon "~/.icons/hashtag-solid.svg")
-  (erc-track-exclude-types '("JOIN" "MODE" "NICK" "PART" "QUIT"
-                             "324" "329" "332" "333" "353" "477"))
-
-  :config
-  (add-to-list 'erc-modules 'notifications)
-  (add-to-list 'erc-modules 'spelling)
-  (erc-services-mode 1)
-  (erc-truncate-mode 1)
-  (erc-update-modules)
-  )
-
-
-  (defun erc-notifications-notify-on-match (match-type nickuserhost msg)
-  (when (eq match-type 'current-nick)
-    (let ((nick (nth 0 (erc-parse-user nickuserhost))))
-      (unless (or (string-match-p "^Server:" nick)
-                  (string-match-p "^\[[0-9]+:[0-9]+\]" msg)
-                  (when (boundp 'erc-track-exclude)
-                    (member nick erc-track-exclude)))
-        (erc-notifications-notify nick msg)))))
-
-(use-package erc-hl-nicks
-  :after erc
-  :config
-  (setq erc-hl-nicks-maximum-luminence 80))
-
-(use-package erc-image
-  :after erc)
-#+END_SRC
-*** Password Store
-#+BEGIN_SRC emacs-lisp
-(use-package password-store
-:ensure t)
-#+END_SRC
 *** Smartparens
 #+BEGIN_SRC emacs-lisp
 (use-package smartparens
@@ -962,8 +750,8 @@ Delay the activation of notifications and create a custome display function whic
 *** Rainbow Mode
 #+BEGIN_SRC emacs-lisp
 (use-package rainbow-mode
-:config
-(add-hook 'prog-mode-hook #'rainbow-mode))
+  :diminish
+  :hook ((prog-mode . rainbow-mode)))
 #+END_SRC
 *** Rainbow-Delimiters
 #+BEGIN_SRC emacs-lisp
@@ -1180,11 +968,6 @@ the languages in ISPELL-LANGUAGES when invoked."
   (add-hook 'before-save-hook #'lsp-organize-imports t t))
 
 (use-package go-mode
-  ;; :init
-  ;; (progn
-  ;;   (if (executable-find "goimports") (setq gofmt-command "goimports"))
-  ;;   (setq gofmt-command "goimports")
-  ;;   (add-hook 'before-save-hook 'gofmt-before-save))
   :config
   (add-to-list 'exec-path "/home/tpanum/go/bin")
   (add-hook 'go-mode-hook 'electric-pair-mode)

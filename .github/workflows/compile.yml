@@ -1,0 +1,17 @@
+name: Compile configuration
+on: [push]
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Install Emacs
+      run: |
+        sudo add-apt-repository ppa:kelleyk/emacs
+        sudo apt-get update -y
+        sudo apt-get install -y emacs27 build-essential
+        emacs --version
+
+    - name: Compile config
+      run: make compile
