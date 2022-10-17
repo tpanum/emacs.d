@@ -58,7 +58,6 @@
     - [[#anaconda-mode][Anaconda Mode]]
     - [[#elm-mode][Elm Mode]]
     - [[#sql-mode][SQL Mode]]
-    - [[#csharp][Csharp]]
     - [[#python-mode][Python Mode]]
     - [[#haskell-mode][Haskell Mode]]
     - [[#vue-mode][Vue Mode]]
@@ -940,6 +939,7 @@ the languages in ISPELL-LANGUAGES when invoked."
   :config
   (setq read-process-output-max (* 1024 1024)))
 #+END_SRC
+
 *** Rust Mode
 #+BEGIN_SRC emacs-lisp
 (use-package rust-mode
@@ -1026,9 +1026,7 @@ the languages in ISPELL-LANGUAGES when invoked."
 (use-package anaconda-mode
   :after flycheck
   :hook ((python-mode . anaconda-mode)
-         (python-mode . anaconda-eldoc-mode)
-         (python-mode . (lambda () (set (make-local-variable 'compile-command) (modify-syntax-entry ?_ "w"))))
-         (python-mode . (lambda () (set (make-local-variable 'compile-command) (concat "python " buffer-file-name)))))
+         (python-mode . anaconda-eldoc-mode))
   :general (:keymaps 'python-mode-map
                      :prefix "C-c"
                      "C-c" 'recompile))
@@ -1098,28 +1096,13 @@ Add backend for company mode
                )))
 #+END_SRC
 
-*** Csharp
-#+BEGIN_SRC emacs-lisp
-(use-package csharp-mode
-  :mode "\\.cs\\'")
-(use-package omnisharp
-  :after (:all company flycheck)
-  :config
-  (add-hook 'csharp-mode-hook 'omnisharp-mode)
-  ;; Company integration
-  (eval-after-load
-   'company
-   '(add-to-list 'company-backends 'company-omnisharp))
-  (add-hook 'csharp-mode-hook #'company-mode)
-  ;; Flycheck integration
-  (add-hook 'csharp-mode-hook #'flycheck-mode))
-#+END_SRC
-
 *** Python Mode
 #+BEGIN_SRC emacs-lisp
+(use-package python-mode
+  :after flycheck
+  :hook ((python-mode . (lambda () (set (make-local-variable 'compile-command) (modify-syntax-entry ?_ "w"))))
+(python-mode . (lambda () (set (make-local-variable 'compile-command) (concat "python " buffer-file-name))))))
 #+END_SRC
-
-#+RESULTS:
 
 Run `isort` on save.
 #+BEGIN_SRC emacs-lisp
@@ -1191,10 +1174,6 @@ Enable mypy checking
 #+END_SRC
 *** Tex Mode
 #+BEGIN_SRC emacs-lisp
-(use-package auctex-latexmk
-             :config
-             (auctex-latexmk-setup))
-
 (use-package cdlatex
   :hook (LaTeX-mode . turn-on-cdlatex)
   :config
