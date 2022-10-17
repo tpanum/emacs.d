@@ -1,189 +1,27 @@
-#+TITLE: Emacs Configuration
-#+AUTHOR: Thomas Kobber Panum
-#+PROPERTY: header-args :tangle yes
-
-* Configuration
-:PROPERTIES:
-:VISIBILITY: children
-:END:
-
-** Table of Contents :TOC_3_gh:
-- [[#configuration][Configuration]]
-  - [[#org-file-tweaks][Org File Tweaks]]
-    - [[#automatically-tangle][Automatically Tangle]]
-    - [[#visibility-settings][Visibility Settings]]
-    - [[#table-of-contents][Table of Contents]]
-  - [[#personal-information][Personal Information]]
-  - [[#emacs-initialization][Emacs Initialization]]
-    - [[#settings][Settings]]
-    - [[#package-management][Package Management]]
-    - [[#new-defaults][New Defaults]]
-  - [[#packages][Packages]]
-    - [[#theme][Theme]]
-    - [[#dashboard][Dashboard]]
-    - [[#modeline][Modeline]]
-    - [[#evil][Evil]]
-    - [[#ivy][Ivy]]
-    - [[#counsel][Counsel]]
-    - [[#company][Company]]
-    - [[#swiper][Swiper]]
-    - [[#wgrep][Wgrep]]
-    - [[#magit][Magit]]
-    - [[#org][Org]]
-    - [[#toc-org][Toc-org]]
-    - [[#which-key][Which Key]]
-    - [[#general-navigation][General (Navigation)]]
-    - [[#aggresive-indent][Aggresive Indent]]
-    - [[#yassnippets][Yassnippets]]
-    - [[#nlinum][Nlinum]]
-    - [[#smartparens][Smartparens]]
-    - [[#rainbow-mode][Rainbow Mode]]
-    - [[#rainbow-delimiters][Rainbow-Delimiters]]
-    - [[#flyspell-mode][Flyspell Mode]]
-    - [[#flycheck][Flycheck]]
-    - [[#ace-window][Ace Window]]
-    - [[#avy][Avy]]
-    - [[#tramp][Tramp]]
-    - [[#org-babel][Org Babel]]
-  - [[#dired][Dired]]
-  - [[#additional-modes][Additional Modes]]
-    - [[#lsp-mode][LSP Mode]]
-    - [[#rust-mode][Rust Mode]]
-    - [[#nix-mode][Nix Mode]]
-    - [[#markdown-mode][Markdown Mode]]
-    - [[#go-mode][Go Mode]]
-    - [[#docker-mode][Docker Mode]]
-    - [[#svelte-mode][Svelte Mode]]
-    - [[#web-mode][Web Mode]]
-    - [[#anaconda-mode][Anaconda Mode]]
-    - [[#elm-mode][Elm Mode]]
-    - [[#sql-mode][SQL Mode]]
-    - [[#csharp][Csharp]]
-    - [[#python-mode][Python Mode]]
-    - [[#haskell-mode][Haskell Mode]]
-    - [[#vue-mode][Vue Mode]]
-    - [[#json-mode][JSON Mode]]
-    - [[#yaml-mode][YAML Mode]]
-    - [[#tex-mode][Tex Mode]]
-    - [[#protobuf-mode][Protobuf Mode]]
-    - [[#git-gutter-mode][Git Gutter Mode]]
-  - [[#functions][Functions]]
-    - [[#open-config][Open Config]]
-  - [[#post-initialization][Post Initialization]]
-
-** Org File Tweaks
-There are a few tweaks included in this org file that make it a little easier to
-work with.
-
-*** Automatically Tangle
-First there is a property defined on the file:
-
-#+BEGIN_SRC :tangle no
-header-args :tangle yes
-#+END_SRC
-
-This tells emacs to automatically tangle (include) all code blocks in this file when
-generating the code for the config, unless the code block explicitly includes
-=:tangle no= as the above code block does.
-
-*** Visibility Settings
-Next we have a property defined on the [[Configuration][Configuration]] heading that defines the visibility
-that tells org to show it's direct children on startup. This way a clean outline of all
-sub headings under Configuration is shown each time this file is opened in org-mode.
-
-*** Table of Contents
-Finally, there is a [[Table of Contents][Table of Contents]] heading that includes the tag: =:TOC_3_gh:=. This
-tells an org-mode package =toc-org= to generate a table of contents under this heading
-that has a max depth of 3 and is created using Github-style hrefs. This table of contents
-is updated everytime the file is saved and makes for a functional table of contents that
-works property directly on github.
-** Personal Information
-Let's set some variables with basic user information.
-
-#+BEGIN_SRC emacs-lisp
 (setq user-full-name "Thomas Kobber Panum")
-#+END_SRC
 
-** Emacs Initialization
-*** Settings
-We're going to increase the gc-cons-threshold to a very high number to decrease the load and compile time.
-We'll lower this value significantly after initialization has completed. We don't want to keep this value
-too high or it will result in long GC pauses during normal usage.
-
-#+BEGIN_SRC emacs-lisp
 (eval-and-compile
   (setq gc-cons-threshold 402653184
         gc-cons-percentage 0.6))
-#+END_SRC
 
-Disable certain byte compiler warnings to cut down on the noise. This is a personal choice and can be removed
-if you would like to see any and all byte compiler warnings.
-
-#+BEGIN_SRC emacs-lisp
 (setq byte-compile-warnings '(not free-vars unresolved noruntime lexical make-local))
-#+END_SRC
 
-    Enable debugging
-    #+BEGIN_SRC emacs-lisp
-(eval-and-compile (setq debug-on-error t))
-#+END_SRC
-
-*** Package Management
-**** Package Settings
-We're going to set the =load-path= ourselves and avoid calling =(package-initilize)= (for
-performance reasons) so we need to set =package--init-file-ensured= to true to tell =package.el=
-to not automatically call it on our behalf. Additionally we're setting
-=package-enable-at-startup= to nil so that packages will not automatically be loaded for us since
-=use-package= will be handling that.
-
-#+BEGIN_SRC emacs-lisp
-              (eval-and-compile
-                (setq load-prefer-newer t
-                      package-user-dir "~/.emacs.d/elpa"
-                      package--init-file-ensured t
-                      package-enable-at-startup nil)
+(eval-and-compile
+  (setq load-prefer-newer t
+        package-user-dir "~/.emacs.d/elpa"
+        package--init-file-ensured t
+        package-enable-at-startup nil)
 
 
-                (unless (file-directory-p package-user-dir)
-                  (make-directory package-user-dir t)))
-#+END_SRC
+  (unless (file-directory-p package-user-dir)
+    (make-directory package-user-dir t)))
 
-**** Use-Package Settings
-Tell =use-package= to always defer loading packages unless explicitly told otherwise. This speeds up
-initialization significantly as many packages are only loaded later when they are explicitly used.
-
-#+BEGIN_SRC emacs-lisp
 (setq use-package-always-defer t
       use-package-verbose t)
-#+END_SRC
 
-**** Manually Set Load Path
-We're going to set the load path ourselves so that we don't have to call =package-initialize= at
-runtime and incur a large performance hit. This load-path will actually be faster than the one
-created by =package-initialize= because it appends the elpa packages to the end of the load path.
-Otherwise any time a builtin package was required it would have to search all of third party paths
-first.
-
-#+BEGIN_SRC emacs-lisp
 (eval-and-compile
   (setq load-path (append load-path (directory-files package-user-dir t "^[^.]" t))))
-#+END_SRC
 
-**** Initialize Package Management
-Next we are going to require =package.el= and add our additional package archives, 'melpa' and 'org'.
-Afterwards we need to initialize our packages and then ensure that =use-package= is installed, which
-we promptly install if it's missing. Finally we load =use-package= and tell it to always install any
-missing packages.
-
-Note that this entire block is wrapped in =eval-when-compile=. The effect of this is to perform all
-of the package initialization during compilation so that when byte compiled, all of this time consuming
-code is skipped. This can be done because the result of byte compiling =use-package= statements results
-in the macro being fully expanded at which point =use-package= isn't actually required any longer.
-
-Since the code is automatically compiled during runtime, if the configuration hasn't already been
-previously compiled manually then all of the package initialization will still take place at startup.
-
-#+BEGIN_SRC emacs-lisp
 (eval-when-compile
   (require 'package)
 
@@ -207,11 +45,7 @@ previously compiled manually then all of the package initialization will still t
 
   (require 'use-package)
   (setq use-package-always-ensure t))
-#+END_SRC
 
-*** New Defaults
-**** Base
-#+BEGIN_SRC emacs-lisp
 (setq delete-old-versions -1 )		; delete excess backup versions silently
 (setq version-control t )		; use version control
 (setq vc-make-backup-files t )		; make backups file even when in version controlled dir
@@ -226,9 +60,7 @@ previously compiled manually then all of the package initialization will still t
 (setq default-fill-column 80)		; toggle wrapping text at the 80th character
 (setq initial-scratch-message "") ; print a default message in the empty scratch buffer opened at startup
 (setq calendar-date-style "european")
-#+END_SRC
-**** UI
-#+BEGIN_SRC emacs-lisp
+
 (menu-bar-mode 0)
 (blink-cursor-mode -1)
 (scroll-bar-mode -1)
@@ -248,82 +80,15 @@ previously compiled manually then all of the package initialization will still t
 
 (use-package hasklig-mode
              :hook (prog-mode))
-#+END_SRC
 
-**** Ligatures
-;; (defun fira-code-mode--make-alist (list)
-;;   "Generate prettify-symbols alist from LIST."
-;;   (let ((idx -1))
-;;     (mapcar
-;;      (lambda (s)
-;;        (setq idx (1+ idx))
-;;        (let* ((code (+ #Xe100 idx))
-;;               (width (string-width s))
-;;               (prefix ())
-;;               (suffix '(?\s (Br . Br)))
-;;               (n 1))
-;; 	 (while (< n width)
-;; 	   (setq prefix (append prefix '(?\s (Br . Bl))))
-;; 	   (setq n (1+ n)))
-;; 	 (cons s (append prefix suffix (list (decode-char 'ucs code))))))
-;;      list)))
 
-;; (defconst fira-code-mode--ligatures
-;;   '("www" "**" "***" "**/" "*>" "*/" "\\\\" "\\\\\\"
-;;     "{-" "[]" "::" ":::" ":=" "!!" "!=" "!==" "-}"
-;;     "--" "---" "-->" "->" "->>" "-<" "-<<" "-~"
-;;     "#{" "#[" "##" "###" "####" "#(" "#?" "#_" "#_("
-;;     ".-" ".=" ".." "..<" "..." "?=" "??" ";;" "/*"
-;;     "/**" "/=" "/==" "/>" "//" "///" "&&" "||" "||="
-;;     "|=" "|>" "^=" "$>" "++" "+++" "+>" "=:=" "=="
-;;     "===" "==>" "=>" "=>>" "<=" "=<<" "=/=" ">-" ">="
-;;     ">=>" ">>" ">>-" ">>=" ">>>" "<*" "<*>" "<|" "<|>"
-;;     "<$" "<$>" "<!--" "<-" "<--" "<->" "<+" "<+>" "<="
-;;     "<==" "<=>" "<=<" "<>" "<<" "<<-" "<<=" "<<<" "<~"
-;;     "<~~" "</" "</>" "~@" "~-" "~=" "~>" "~~" "~~>" "%%"
-;;     "x" ":" "+" "+" "*"))
 
-;; (defvar fira-code-mode--old-prettify-alist)
-
-;; (defun fira-code-mode--enable ()
-;;   "Enable Fira Code ligatures in current buffer."
-;;   (setq-local fira-code-mode--old-prettify-alist prettify-symbols-alist)
-;;   (setq-local prettify-symbols-alist (append (fira-code-mode--make-alist fira-code-mode--ligatures) fira-code-mode--old-prettify-alist))
-;;   (prettify-symbols-mode t))
-
-;; (defun fira-code-mode--disable ()
-;;   "Disable Fira Code ligatures in current buffer."
-;;   (setq-local prettify-symbols-alist fira-code-mode--old-prettify-alist)
-;;   (prettify-symbols-mode -1))
-
-;; (define-minor-mode fira-code-mode
-;;   "Fira Code ligatures minor mode"
-;;   :lighter " Fira Code"
-;;   (setq-local prettify-symbols-unprettify-at-point 'right-edge)
-;;   (if fira-code-mode
-;;       (fira-code-mode--enable)
-;;     (fira-code-mode--disable)))
-
-;; (defun fira-code-mode--setup ()
-;;   "Setup Fira Code Symbols"
-;;   (set-fontset-font t '(#Xe100 . #Xe16f) "Fira Code Symbol"))
-
-;; (provide 'fira-code-mode)
-
-;; (add-hook 'prog-mode-hook #'fira-code-mode)
-#+BEGIN_SRC emacs-lisp
-#+END_SRC
-** Packages
-*** Theme
-#+BEGIN_SRC emacs-lisp
-(use-package modus-themes
+(use-package modus-operandi-theme
   :config
   (load-theme 'modus-operandi t)
   (setq modus-operandi-theme-slanted-constructs t)
   (setq modus-operandi-theme-bold-constructs t))
-#+END_SRC
-*** Dashboard
-#+BEGIN_SRC emacs-lisp
+
 (use-package dashboard
   :config
   (dashboard-setup-startup-hook)
@@ -333,9 +98,7 @@ previously compiled manually then all of the package initialization will still t
                             (setq initial-buffer-choice nil)
                             (get-buffer "*dashboard*")))
   (dashboard-items '((agenda . 10))))
-#+END_SRC
-*** Modeline
-#+BEGIN_SRC emacs-lisp
+
 (use-package all-the-icons)
 
 (use-package moody
@@ -367,63 +130,37 @@ previously compiled manually then all of the package initialization will still t
                                  mode-line-modes
                                  mode-line-end-spaces))
 
-#+END_SRC
-
-*** Evil
-Install, automatically load, and enable evil. It's like vim, but better!
-#+BEGIN_SRC emacs-lisp
-    (use-package evil
+(use-package evil
     :demand t
     :config
     (evil-mode 1)
 (define-key key-translation-map (kbd "ESC") (kbd "C-g")))
-#+END_SRC
 
-Handling code comments correctly with Evil :-)
+(use-package evil-nerd-commenter
+:demand t
+:config
+(evilnc-default-hotkeys))
 
-#+BEGIN_SRC emacs-lisp
-    (use-package evil-nerd-commenter
-    :demand t
-    :config
-    (evilnc-default-hotkeys))
-#+END_SRC
+(use-package evil-surround
+:config
+(global-evil-surround-mode 1))
 
-Manage surronding objects
+(use-package evil-indent-plus
+:config
+(evil-indent-plus-default-bindings))
 
-#+BEGIN_SRC emacs-lisp
-    (use-package evil-surround
-    :config
-    (global-evil-surround-mode 1))
-#+END_SRC
-
-#+BEGIN_SRC emacs-lisp
-    (use-package evil-indent-plus
-    :config
-    (evil-indent-plus-default-bindings))
-#+END_SRC
-
-#+BEGIN_SRC emacs-lisp
 (use-package evil-snipe
 :after general
   :config
   (setq  evil-snipe-scope 'whole-visible)
   (evil-snipe-mode 1)
   (evil-snipe-override-mode 1))
-#+END_SRC
 
-Mode for handling alignment
+(use-package evil-lion
+:config
+(evil-lion-mode))
 
-#+BEGIN_SRC emacs-lisp
-    (use-package evil-lion
-    :config
-    (evil-lion-mode))
-#+END_SRC
-
-*** Ivy
-Generic completion frontend that's just awesome! Let's install and enable it.
-
-#+BEGIN_SRC emacs-lisp
-    (use-package ivy
+(use-package ivy
     :demand t
     :after general
     :config
@@ -435,19 +172,10 @@ Generic completion frontend that's just awesome! Let's install and enable it.
     (global-set-key [remap execute-extended-command] #'counsel-M-x)
     (global-set-key [remap find-file] #'counsel-find-file)
 )
-#+END_SRC
 
-*** Counsel
-Counsel allows us to utilize ivy by replacing many built-in and common functions
-with richer versions. Let's install it!
-
-#+BEGIN_SRC emacs-lisp
 (use-package counsel
   :demand t)
-#+END_SRC
 
-*** Company
-#+BEGIN_SRC emacs-lisp
 (use-package company
              :hook (after-init . global-company-mode)
              :config
@@ -455,43 +183,18 @@ with richer versions. Let's install it!
              (setq company-idle-delay 0.2)
              (setq company-tooltip-align-annotations t)
              (setq company-minimum-prefix-length 2))
-#+END_SRC
 
-Add icons to company
-#+BEGIN_SRC emacs-lisp
 (use-package company-box
   :hook (company-mode . company-box-mode))
-#+END_SRC
-*** Swiper
-Swiper is an awesome searching utility with a quick preview. Let's install it and
-load it when =swiper= or =swiper-all= is called.
 
-#+BEGIN_SRC emacs-lisp
 (use-package swiper
   :commands (swiper swiper-all))
-#+END_SRC
 
-*** Wgrep
-
-#+BEGIN_SRC emacs-lisp
 (use-package wgrep)
-#+END_SRC
 
-*** Magit
-The magical git client. Let's load magit only when one of the several entry pont
-functions we invoke regularly outside of magit is called.
-
-#+BEGIN_SRC emacs-lisp
 (use-package magit
   :commands (magit-status magit-blame magit-log-buffer-file magit-log-all))
-#+END_SRC
 
-*** Org
-Let's include a newer version of org-mode than the one that is built in. We're going
-to manually remove the org directories from the load path, to ensure the version we
-want is prioritized instead.
-
-#+BEGIN_SRC emacs-lisp
 ;; remove built in org-mode from path
 (with-no-warnings (require 'cl))
 (setq load-path (remove-if (lambda (x) (string-match-p "org$" x)) load-path))
@@ -499,6 +202,7 @@ want is prioritized instead.
 (use-package org
   :ensure org-plus-contrib
   :pin org
+  :after general
   :defer t
   :config
   (setq org-startup-indented t)
@@ -519,6 +223,8 @@ want is prioritized instead.
   (defun my-beamer-bold (contents backend info)
     (when (eq backend 'beamer)
       (replace-regexp-in-string "\\`\\\\[A-Za-z0-9]+" "\\\\textbf" contents)))
+
+  (add-to-list 'org-export-filter-bold-functions 'my-beamer-bold)
 
   (setq tpanum/org-exporters
         '(("latex" . org-latex-export-to-pdf)
@@ -556,74 +262,101 @@ want is prioritized instead.
   (require 'ox-extra)
   (ox-extras-activate '(ignore-headlines))
   (add-to-list 'org-latex-classes
-	       '("IEEEtran"
-		 "\\documentclass{IEEEtran}"
-		 ("\\section{%s}" . "\\section*{%s}")
-		 ("\\subsection{%s}" . "\\subsection*{%s}")
-		 ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
-		 ("\\paragraph{%s}" . "\\paragraph*{%s}")
-		 ("\\subparagraph{%s}" . "\\subparagraph*{%s}")))
-
-  (add-to-list 'org-export-filter-bold-functions 'my-beamer-bold)
+               '("IEEEtran"
+                 "\\documentclass{IEEEtran}"
+                 ("\\section{%s}" . "\\section*{%s}")
+                 ("\\subsection{%s}" . "\\subsection*{%s}")
+                 ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
+                 ("\\paragraph{%s}" . "\\paragraph*{%s}")
+                 ("\\subparagraph{%s}" . "\\subparagraph*{%s}")))
   (general-define-key :keymaps 'org-capture-mode-map
                       :states '(normal)
                       "q" 'org-capture-finalize))
-#+END_SRC
 
-Make latexpdf and beamer-pdf be one function
-#+BEGIN_SRC emacs-lisp
+(use-package org-ref
+             :after general
+             :config
+             (setq
+              org-ref-default-bibliography '("~/research/bibliography.bib")
+              org-ref-pdf-directory "~/research/papers/"
+              org-ref-bibliography-notes "~/research/papers/papers.org"
+              bibtex-completion-bibliography '("~/research/bibliography.bib")
+              bibtex-completion-library-path "~/research/papers"
+              bibtex-completion-notes-path "~/research/papers/papers.org"
+              org-ref-completion-library 'org-ref-ivy-cite)
+
+             (setq bibtex-completion-notes-template-one-file "
+* ${title} (${year}) [${author-or-editor}]
+  :PROPERTIES:
+  :Custom_ID: ${=key=}
+  :END:
+
+"))
+
 (defun tpanum/org-to-pdf ()
   (interactive)
   (if (string-match "latex_class:[ ]*beamer" (buffer-string)) ; current buffer contains beamer class
       (org-beamer-export-to-pdf)
     (org-latex-export-to-pdf)))
-#+END_SRC
 
-Export to reveal.js
-#+BEGIN_SRC emacs-lisp
 (use-package org-re-reveal
   :after org
   :config
   (setq org-re-reveal--href-fragment-prefix org-re-reveal--slide-id-prefix)
 )
-#+END_SRC
 
-Use ox-hugo for blogging
-#+BEGIN_SRC emacs-lisp
+(use-package worf
+             :ensure t
+             :after general
+             :config
+             (defun bjm/worf-insert-internal-link ()
+               "Use ivy to insert a link to a heading in the current `org-mode' document. Code is based on `worf-goto'."
+               (interactive)
+               (let ((cands (worf--goto-candidates)))
+                 (ivy-read "Heading: " cands
+                           :action 'bjm/worf-insert-internal-link-action)))
+
+(use-package with-simulated-input
+:ensure t
+:config
+(defun bjm/worf-insert-internal-link-action (x)
+  "Insert link for `bjm/worf-insert-internal-link'"
+  ;; go to heading
+  (save-excursion
+    (goto-char (cdr x))
+    ;; store link
+    (call-interactively 'org-store-link))
+  ;; return to original point and insert link
+  (with-simulated-input "RET" (call-interactively 'org-insert-last-stored-link))
+  ;; org-insert-last-stored-link adds a newline so delete this
+  (delete-char -1))
+
+             (general-define-key :keymaps 'org-mode-map
+                                 :states '(normal)
+                                 "C-c v" 'bjm/worf-insert-internal-link)))
+
 (use-package ox-hugo
   :after ox)
-#+END_SRC
 
-#+BEGIN_SRC emacs-lisp
 (use-package company-org-block
-  :custom
-  (company-org-block-edit-style 'auto)
-  :hook ((org-mode . (lambda ()
-                       (setq-local company-backends '(company-org-block))
-                       (company-mode +1)))))
-#+END_SRC
+             :load-path "lisp/pkgs"
+             :hook ((org-mode . tpanum/org-mode-company-hook-function))
+             :config
+             (defun tpanum/org-mode-company-hook-function ()
+               (setq-local company-begin-commands t)
+               (setq-local company-backends '(company-org-block))
+               (company-mode +1)))
 
-*** Toc-org
-Let's install and load the =toc-org= package after org mode is loaded. This is the
-package that automatically generates an up to date table of contents for us.
-
-#+BEGIN_SRC emacs-lisp
 (use-package toc-org
   :after org
   :init (add-hook 'org-mode-hook #'toc-org-enable))
-#+END_SRC
 
-*** Which Key
-#+BEGIN_SRC emacs-lisp
-    (use-package which-key
-    :ensure t
-    :config
-    (setq which-key-idle-delay 0.4)
-    (which-key-mode))
-#+END_SRC
-*** General (Navigation)
-I replaced evil's default `/` with `swiper`.
-#+BEGIN_SRC emacs-lisp
+(use-package which-key
+:ensure t
+:config
+(setq which-key-idle-delay 0.4)
+(which-key-mode))
+
 (use-package general
              :ensure t
              :config
@@ -655,6 +388,10 @@ I replaced evil's default `/` with `swiper`.
 
               "q" 'kill-this-buffer
               "r"  '(:ignore t :which-key "Research")
+              "rad" 'doi-utils-add-bibtex-entry-from-doi
+              "ras" 'doi-utils-add-entry-from-crossref-query
+              "rc" 'org-ref-helm-insert-cite-link
+              "rw" 'helm-bibtex
               "wo" 'other-window
               "wd" 'delete-other-windows
               "wsh" 'split-window-right
@@ -676,11 +413,7 @@ I replaced evil's default `/` with `swiper`.
 
 (global-set-key (kbd "C-+") 'text-scale-increase)
 (global-set-key (kbd "C--") 'text-scale-decrease)
-#+END_SRC
 
-**** ripgrep search from minibuffer
-Allow me to access ripgrep from find file.
-#+BEGIN_SRC emacs-lisp
 (defmacro minibuffer-quit-and-run (&rest body)
   "Quit the minibuffer and run BODY afterwards."
   `(progn
@@ -695,25 +428,18 @@ Allow me to access ripgrep from find file.
   (minibuffer-quit-and-run
    (let ((selected-candidate (concat (file-name-as-directory ivy--directory) (ivy-state-current ivy-last))))
      (if (file-directory-p selected-candidate) (counsel-rg "" selected-candidate) (counsel-rg "" ivy--directory)))))
-#+END_SRC
 
-*** Aggresive Indent
-#+BEGIN_SRC emacs-lisp
+(use-package aggressive-indent
+  :ensure t
+:config
+(global-aggressive-indent-mode)
+(add-to-list 'aggressive-indent-excluded-modes 'html-mode)
+(add-to-list 'aggressive-indent-excluded-modes 'sql-mode)
+(add-to-list 'aggressive-indent-excluded-modes 'nix-mode)
+(add-to-list 'aggressive-indent-excluded-modes 'vue-mode)
+(add-to-list 'aggressive-indent-excluded-modes 'json-mode)
+(add-to-list 'aggressive-indent-excluded-modes 'web-mode))
 
-    (use-package aggressive-indent
-    :ensure t
-  :config
-  (global-aggressive-indent-mode)
-  (add-to-list 'aggressive-indent-excluded-modes 'html-mode)
-  (add-to-list 'aggressive-indent-excluded-modes 'sql-mode)
-  (add-to-list 'aggressive-indent-excluded-modes 'nix-mode)
-  (add-to-list 'aggressive-indent-excluded-modes 'vue-mode)
-  (add-to-list 'aggressive-indent-excluded-modes 'json-mode)
-  (add-to-list 'aggressive-indent-excluded-modes 'web-mode))
-#+END_SRC
-
-*** Yassnippets
-#+BEGIN_SRC emacs-lisp
 (use-package yasnippet
              :diminish yas-minor-mode
              :commands (yas-global-mode)
@@ -726,18 +452,179 @@ Allow me to access ripgrep from find file.
              :config
              (yas-global-mode)
              (setq yas-indent-line 'none))
-#+END_SRC
 
-*** Nlinum
-#+BEGIN_SRC emacs-lisp
 (use-package nlinum
              :ensure t
              :config (add-hook 'prog-mode-hook '(lambda () (nlinum-mode t)))
              (setq nlinum-highlight-current-line t))
-#+END_SRC
 
-*** Smartparens
-#+BEGIN_SRC emacs-lisp
+(use-package circe
+:config
+(defconst irc-left-padding 8 "Padding for nicks")
+(defconst irc-time-stamp-format "%H:%M")
+
+(require 'circe-color-nicks)
+(enable-circe-color-nicks)
+
+(require 'circe-lagmon)
+(circe-lagmon-mode)
+
+(setq
+ circe-reduce-lurker-spam t
+ circe-default-part-message "Bye"
+ circe-default-quit-message "Bye"
+ circe-color-nicks-everywhere t
+ circe-format-say (format "{nick:+%ss} │ {body}" irc-left-padding)
+ circe-format-self-say circe-format-say
+ circe-format-action (format "{nick:+%ss} * {body}" irc-left-padding)
+ circe-format-self-action circe-format-action
+ circe-network-defaults ()
+ circe-network-options
+ `(("freenode"
+    :host "weechat.panum.dk"
+    :port 8000
+    :server-buffer-name "⇄ freenode"
+    :nick "tpanum"
+    :user "tpanum"
+    :pass weechat-relay-freenode-pass
+    :use-tls t
+    )
+   ("znc-bitlbee"
+    :host "znc.panum.dk"
+    :port 5000
+    :server-buffer-name "⇄ freenode"
+    :nick "tpanum"
+    :user "znc/freenode"
+    :pass personal-znc-pass
+    ;; :lagmon-disabled t
+    :tls t
+    )))
+
+(setq lui-fill-type nil)
+
+(add-hook 'circe-channel-mode-hook #'turn-on-visual-line-mode)
+
+(defvar irc-truncate-nick-char ?…
+  "Character to displayed when nick > `irc-left-padding' in length.")
+
+(defun irc-circe-truncate-nicks ()
+  "Truncate long nicknames in chat output non-destructively."
+  (when-let ((beg (text-property-any (point-min) (point-max) 'lui-format-argument 'nick)))
+    (goto-char beg)
+    (let ((end (next-single-property-change beg 'lui-format-argument))
+          (nick (plist-get (plist-get (text-properties-at beg) 'lui-keywords)
+                           :nick)))
+      (when (> (length nick) irc-left-padding)
+        (compose-region (+ beg irc-left-padding -1) end
+                        irc-truncate-nick-char)))))
+
+(add-hook 'lui-pre-output-hook 'irc-circe-truncate-nicks)
+
+(defun irc-init-lui-margins ()
+  "Fix margins for irc"
+  (setq lui-time-stamp-position 'right-margin
+        lui-time-stamp-format irc-time-stamp-format
+        right-margin-width (length (format-time-string lui-time-stamp-format))))
+
+(defun irc-init-lui-wrapping ()
+  "Fix wrapping for irc"
+  (interactive)
+  (setq fringes-outside-margins t
+        word-wrap t
+        wrap-prefix (concat (make-string (+ irc-left-padding 1) ? ) "│ ")))
+
+(add-hook 'lui-mode-hook 'irc-init-lui-wrapping)
+(add-hook 'lui-mode-hook 'irc-init-lui-margins))
+
+(use-package circe-notifications
+:ensure t
+:config
+(setq
+circe-notifications-wait-for 2
+circe-notifications-JOIN nil
+circe-notifications-PART nil)
+(add-to-list 'circe-notifications-watch-strings "#slack-aau-ntp")
+(add-to-list 'circe-notifications-watch-strings "#slack-aau-backend")
+(add-to-list 'circe-notifications-watch-strings "#slack-aau-random")
+(add-to-list 'circe-notifications-watch-strings "#slack-aau-research")
+(add-hook 'circe-server-connected-hook 'tpanum/enable-circe-notifications))
+
+(defun tpanum/enable-circe-notifications ()
+  "Turn on notifications."
+  (interactive)
+  (run-at-time "5sec" nil 'enable-circe-notifications))
+
+(defun circe-notifications-notify (nick body channel)
+  (if (and (not (string-match "^\[[0-9]+:[0-9]+\]" body)) ; make sure playback messages from znc are not displayed
+  (not (string-match "^\\\*\\\*\\\*$" nick))
+  (not (string-match "^/\\(PART\\|JOIN\\)" body)))
+      (alert
+       (concat "<b>" nick "</b>: " body)
+       :severity circe-notifications-alert-severity
+       :title channel
+       :category "chat"
+       :style circe-notifications-alert-style)))
+
+(defun weechat-relay-freenode-pass (server)
+  "Return the password for the `SERVER'."
+  (concat "freenode" ":" (password-store-get "personal/weechat-relay")))
+
+(defun personal-znc-pass (server)
+  "Return the password for the `SERVER'."
+  (concat "freenode" ":" (password-store-get "personal/znc")))
+
+(defun tpanum/irc ()
+  "Connect to IRC"
+  (interactive)
+  ;; (circe "znc-freenode")
+  (circe "znc-bitlbee"))
+
+(use-package erc
+:after password-store
+  :custom
+  (erc-autojoin-timing 'ident)
+  (erc-fill-function 'erc-fill-static)
+  (erc-fill-static-center 14)
+  (erc-hide-list '("JOIN" "PART" "QUIT"))
+  (erc-lurker-hide-list '("JOIN" "PART" "QUIT"))
+  (erc-lurker-threshold-time 43200)
+  (erc-prompt-for-nickserv-password nil)
+  (erc-server-reconnect-attempts 20)
+  (erc-server-reconnect-timeout 5)
+  (erc-prompt "   >")
+(erc-notifications-icon "~/.icons/hashtag-solid.svg")
+  (erc-track-exclude-types '("JOIN" "MODE" "NICK" "PART" "QUIT"
+                             "324" "329" "332" "333" "353" "477"))
+
+  :config
+  (add-to-list 'erc-modules 'notifications)
+  (add-to-list 'erc-modules 'spelling)
+  (erc-services-mode 1)
+  (erc-truncate-mode 1)
+  (erc-update-modules)
+  )
+
+
+  (defun erc-notifications-notify-on-match (match-type nickuserhost msg)
+  (when (eq match-type 'current-nick)
+    (let ((nick (nth 0 (erc-parse-user nickuserhost))))
+      (unless (or (string-match-p "^Server:" nick)
+                  (string-match-p "^\[[0-9]+:[0-9]+\]" msg)
+                  (when (boundp 'erc-track-exclude)
+                    (member nick erc-track-exclude)))
+        (erc-notifications-notify nick msg)))))
+
+(use-package erc-hl-nicks
+  :after erc
+  :config
+  (setq erc-hl-nicks-maximum-luminence 80))
+
+(use-package erc-image
+  :after erc)
+
+(use-package password-store
+:ensure t)
+
 (use-package smartparens
   :ensure t
   :config
@@ -747,20 +634,14 @@ Allow me to access ripgrep from find file.
   (add-to-list 'sp-ignore-modes-list 'circe-server-mode)
   (add-to-list 'sp-ignore-modes-list 'circe-query-mode)
   (smartparens-global-mode 1)))
-#+END_SRC
-*** Rainbow Mode
-#+BEGIN_SRC emacs-lisp
+
 (use-package rainbow-mode
-  :diminish
-  :hook ((prog-mode . rainbow-mode)))
-#+END_SRC
-*** Rainbow-Delimiters
-#+BEGIN_SRC emacs-lisp
+:config
+(add-hook 'prog-mode-hook #'rainbow-mode))
+
 (use-package rainbow-delimiters
 :hook (emacs-lisp-mode . rainbow-delimiters-mode))
-#+END_SRC
-*** Flyspell Mode
-#+BEGIN_SRC emacs-lisp
+
 (use-package ispell
              :defer 15
              :after general
@@ -817,9 +698,7 @@ the languages in ISPELL-LANGUAGES when invoked."
                "Turns on flyspell only if a spell-checking tool is installed."
                (when (executable-find ispell-program-name)
                  (local-set-key (kbd "C-c l") (cycle-languages)))))
-#+END_SRC
-*** Flycheck
-#+BEGIN_SRC emacs-lisp
+
 (use-package pkg-info)
 
 (use-package flycheck
@@ -860,16 +739,12 @@ the languages in ISPELL-LANGUAGES when invoked."
                :fringe-bitmap 'flycheck-fringe-bitmap-ball
                :fringe-face 'flycheck-fringe-warning
                :error-list-face 'flycheck-error-list-warning))
-#+END_SRC
-*** Ace Window
-#+BEGIN_SRC emacs-lisp
+
 (use-package ace-window
   :config
   (global-set-key (kbd "s-w") 'ace-window)
 (global-set-key [remap other-window] 'ace-window))
-#+END_SRC
-*** Avy
-#+BEGIN_SRC emacs-lisp
+
 (use-package avy
   :after (:all general evil-snipe)
   :defer
@@ -878,17 +753,13 @@ the languages in ISPELL-LANGUAGES when invoked."
   (general-define-key
   :states '(normal operator motion)
   "s" 'evil-avy-goto-char-timer))
-#+END_SRC
-*** Tramp
-#+BEGIN_SRC emacs-lisp
+
 (use-package tramp
   :defer t
   :config
   (setf tramp-persistency-file-name
         (concat temporary-file-directory "tramp-" (user-login-name))))
-#+END_SRC
-*** Org Babel
-#+BEGIN_SRC emacs-lisp
+
 (use-package ob
   :ensure nil
   :after org
@@ -921,54 +792,28 @@ the languages in ISPELL-LANGUAGES when invoked."
              (setq org-babel-default-header-args:python
                    '((:exports  . "both")
                      (:results  . "output"))))
-#+END_SRC
 
-** Dired
-#+BEGIN_SRC emacs-lisp
 (use-package dired
              :ensure nil
              :config
              (add-hook 'dired-mode-hook 'auto-revert-mode))
-#+END_SRC
-** Additional Modes
-*** LSP Mode
-#+BEGIN_SRC emacs-lisp
-(use-package lsp-mode
-  :commands (lsp-deferred)
-  :custom
-  (lsp-headerline-breadcrumb-enable nil)
-  :config
-  (setq read-process-output-max (* 1024 1024)))
-#+END_SRC
-*** Rust Mode
-#+BEGIN_SRC emacs-lisp
+
 (use-package rust-mode
   :mode ("\\.rs\\'" . rust-mode)
   :hook electric-pair
   :config
   (setq rust-format-on-save t))
-#+END_SRC
-*** Nix Mode
-#+BEGIN_SRC emacs-lisp
+
 (use-package nix-mode
 :ensure t
 :mode ("\\.nix" . nix-mode)
 :config
 (setq nix-indent-function 'nix-indent-line))
-#+END_SRC
 
-*** Markdown Mode
-#+BEGIN_SRC emacs-lisp
 (use-package markdown-mode
   :config
   (add-to-list 'auto-mode-alist '("\\.md\\'" . gfm-mode))
   (add-to-list 'auto-mode-alist '("\\.markdown\\'" . gfm-mode)))
-#+END_SRC
-*** Go Mode
-#+BEGIN_SRC emacs-lisp
-(defun lsp-go-install-save-hooks ()
-  (add-hook 'before-save-hook #'lsp-format-buffer t t)
-  (add-hook 'before-save-hook #'lsp-organize-imports t t))
 
 (use-package go-mode
   :init
@@ -984,47 +829,31 @@ the languages in ISPELL-LANGUAGES when invoked."
                        "C-c" 'recompile)
     :hook ((go-mode . (lambda () (set (make-local-variable 'compile-command) (concat "go run " buffer-file-name))))
          (go-mode . electric-pair-mode)))
-#+END_SRC
 
-#+BEGIN_SRC emacs-lisp
 (use-package company-go
 :config
 (add-to-list 'company-backends 'company-go))
-#+END_SRC
 
-#+BEGIN_SRC emacs-lisp
 (use-package go-eldoc)
-#+END_SRC
 
-#+BEGIN_SRC emacs-lisp
 (use-package flycheck-golangci-lint
 :after flycheck
 :config (setq flycheck-golangci-lint-executable "golangci-lint run --disable-all --enable typecheck ineffassign golint dupl goconst gocyclo gofmt goimports misspell lll nakedret prealloc")
 :hook (go-mode . flycheck-golangci-lint-setup))
-#+END_SRC
-*** Docker Mode
-#+BEGIN_SRC emacs-lisp
+
 (use-package dockerfile-mode
 :mode "Dockerfile\\'")
-#+END_SRC
 
-*** Svelte Mode
-#+BEGIN_SRC emacs-lisp
 (use-package svelte-mode
   :mode ("\\.svelte$" . svelte-mode))
-#+END_SRC
-*** Web Mode
-#+BEGIN_SRC emacs-lisp
+
 (use-package web-mode
              :mode (("\\.html?\\'" . web-mode)
                     ("\\.xhtml$"   . web-mode))
              :config
              (setq web-mode-enable-engine-detection t))
-#+END_SRC
-*** Anaconda Mode
-#+BEGIN_SRC emacs-lisp
+
 (use-package anaconda-mode
-  :after flycheck
   :hook ((python-mode . anaconda-mode)
          (python-mode . anaconda-eldoc-mode)
          (python-mode . (lambda () (set (make-local-variable 'compile-command) (modify-syntax-entry ?_ "w"))))
@@ -1032,28 +861,20 @@ the languages in ISPELL-LANGUAGES when invoked."
   :general (:keymaps 'python-mode-map
                      :prefix "C-c"
                      "C-c" 'recompile))
-#+END_SRC
 
-#+BEGIN_SRC emacs-lisp
 (use-package eldoc
   :config
   (setq eldoc-idle-delay 1))
-#+END_SRC
 
-Add backend for company mode
-#+BEGIN_SRC emacs-lisp
 (use-package company-anaconda
-  :after (:all company anaconda-mode)
-  :hook ((anaconda-mode . tpanum/anaconda-company-hook-function))
-  :config
-  (add-to-list 'company-backends 'company-anaconda)
-  (defun tpanum/anaconda-company-hook-function ()
-    (set (make-local-variable 'company-backends)
-         '((company-anaconda)))))
-#+END_SRC
+             :after (:all company anaconda-mode)
+             :hook ((anaconda-mode . tpanum/anaconda-company-hook-function))
+             :config
+             (add-to-list 'company-backends 'company-anaconda)
+             (defun tpanum/anaconda-company-hook-function ()
+             (set (make-local-variable 'company-backends)
+             '((company-anaconda)))))
 
-*** Elm Mode
-#+BEGIN_SRC emacs-lisp
 (use-package elm-mode
   :ensure t
   :mode ("\\.elm\\'" . elm-mode)
@@ -1078,9 +899,7 @@ Add backend for company mode
   (eval-after-load 'flycheck
     '(add-hook 'flycheck-mode-hook #'flycheck-elm-setup))
   )
-#+END_SRC
-*** SQL Mode
-#+BEGIN_SRC emacs-lisp
+
 (use-package sqlup-mode
   :diminish sqlup-mode
   :config
@@ -1096,59 +915,26 @@ Add backend for company mode
             '(lambda ()
                (flycheck-select-checker 'sql-sqlint)
                )))
-#+END_SRC
 
-*** Csharp
-#+BEGIN_SRC emacs-lisp
-(use-package csharp-mode
-  :mode "\\.cs\\'")
-(use-package omnisharp
-  :after (:all company flycheck)
-  :config
-  (add-hook 'csharp-mode-hook 'omnisharp-mode)
-  ;; Company integration
-  (eval-after-load
-   'company
-   '(add-to-list 'company-backends 'company-omnisharp))
-  (add-hook 'csharp-mode-hook #'company-mode)
-  ;; Flycheck integration
-  (add-hook 'csharp-mode-hook #'flycheck-mode))
-#+END_SRC
 
-*** Python Mode
-#+BEGIN_SRC emacs-lisp
-#+END_SRC
 
-#+RESULTS:
-
-Run `isort` on save.
-#+BEGIN_SRC emacs-lisp
 (use-package isortify
              :init
              (add-hook 'python-mode-hook 'isortify-mode))
-#+END_SRC
 
-
-
-Format Python on save.
-#+BEGIN_SRC emacs-lisp
 (use-package python-black
              :after python
              :init
              (setq python-black-extra-args '("-l" "79"))
              (add-hook 'python-mode-hook 'python-black-on-save-mode))
-#+END_SRC
 
-Enable mypy checking
-#+BEGIN_SRC emacs-lisp
 (use-package flycheck-mypy
              :after flycheck
              :config
              (setq flycheck-python-mypy-args "--ignore-missing-imports")
              (add-to-list 'flycheck-disabled-checkers 'python-flake8)
              (flycheck-add-next-checker 'python-pylint 'python-mypy t))
-#+END_SRC
-#+BEGIN_SRC emacs-lisp
+
 (use-package jupyter
              :after (:all org python)
              :config
@@ -1163,34 +949,22 @@ Enable mypy checking
              (require 'jupyter-tramp)
              (add-to-list 'tramp-remote-path 'tramp-own-remote-path)
              (org-babel-jupyter-override-src-block "python"))
-#+END_SRC
 
-*** Haskell Mode
-#+BEGIN_SRC emacs-lisp
 (use-package haskell-mode
              :mode (("\\.hs\\'"    . haskell-mode)
                     ("\\.cabal\\'" . haskell-cabal-mode)
                     ("\\.hcr\\'"   . haskell-core-mode)))
-#+END_SRC
 
-*** Vue Mode
-#+BEGIN_SRC emacs-lisp
 (use-package vue-mode
 :config (setq js-indent-level 2)
 :mode (("\\.vue\\'" . vue-mode)))
-#+END_SRC
-*** JSON Mode
-#+BEGIN_SRC emacs-lisp
+
 (use-package json-mode
   :mode (("\\.json\\'" . json-mode)))
-#+END_SRC
-*** YAML Mode
-#+BEGIN_SRC emacs-lisp
+
 (use-package yaml-mode
   :mode (("\\.yml\\'" . yaml-mode)))
-#+END_SRC
-*** Tex Mode
-#+BEGIN_SRC emacs-lisp
+
 (use-package auctex-latexmk
              :config
              (auctex-latexmk-setup))
@@ -1219,15 +993,11 @@ Enable mypy checking
   :config
   (flycheck-vale-setup)
   (flycheck-add-next-checker 'vale 'proselint))
-#+END_SRC
-*** Protobuf Mode
-#+BEGIN_SRC emacs-lisp
+
 (use-package protobuf-mode
   :ensure t
 :mode ("\\.proto\\'" . protobuf-mode))
-#+END_SRC
-*** Git Gutter Mode
-#+BEGIN_SRC emacs-lisp
+
 (use-package git-gutter-fringe
   :diminish git-gutter-mode
   :config
@@ -1241,18 +1011,10 @@ Enable mypy checking
 (define-fringe-bitmap 'git-gutter-fr:deleted
   [0 0 0 0 0 0 0 0 0 0 0 0 0 128 192 224 240 248]
 nil nil 'center))
-#+END_SRC
-** Functions
-*** Open Config
-#+BEGIN_SRC emacs-lisp
+
 (defun tpanum/open-config ()
 (interactive)
 (find-file "~/.emacs.d/emacs.org"))
-#+END_SRC
-** Post Initialization
-Let's lower our GC thresholds back down to a sane level.
 
-#+Begin_SRC emacs-lisp
-   (setq gc-cons-threshold 100000000
-      gc-cons-percentage 0.1)
-#+END_SRC
+(setq gc-cons-threshold 16777216
+   gc-cons-percentage 0.1)
