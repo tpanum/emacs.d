@@ -4,3 +4,6 @@
 !emacs.org
 !init.el
 !.gitignore
+!lisp/compile.el
+!README.md
+!snippets/
