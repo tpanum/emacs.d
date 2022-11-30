@@ -1,10 +1,7 @@
 *
 
-!Makefile
-!emacs.org
-!init.el
+!init.org
 !.gitignore
-!lisp/compile.el
 !README.md
 !snippets/
 !.github/workflows
