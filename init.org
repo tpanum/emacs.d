@@ -349,7 +349,12 @@ The `no-littering` tries to keep `~/emacs.d./` clean of unwanted files
   (setq modus-operandi-theme-slanted-constructs t)
   (setq modus-operandi-theme-bold-constructs t))
 #+END_SRC
-
+** Wgrep
+#+BEGIN_SRC emacs-lisp
+(use-package wgrep
+  :config
+  (setq wgrep-auto-save-buffer t))
+#+END_SRC
 * Programming Modes
 ** Org-mode
 #+BEGIN_SRC emacs-lisp
@@ -392,6 +397,11 @@ Black formatting
 #+BEGIN_SRC emacs-lisp
 (use-package dockerfile-mode
   :mode "Dockerfile\\'")
+#+END_SRC
+** Protobuf
+#+BEGIN_SRC emacs-lisp
+(use-package protobuf-mode
+  :mode ("\\.proto\\'" . protobuf-mode))
 #+END_SRC
 * Finalization
 ** Garbage Collection
