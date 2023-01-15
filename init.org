@@ -48,6 +48,8 @@ Enable use-package and add package repositories
 
 (require 'use-package)
 (setq use-package-always-ensure t)
+
+(use-package diminish)
 #+END_SRC
 
 ** House keeping of .emacs.d.
@@ -77,7 +79,20 @@ The `no-littering` tries to keep `~/emacs.d./` clean of unwanted files
 (setq visible-bell nil)
 #+END_SRC
 
+** Theme
+#+BEGIN_SRC emacs-lisp
+(use-package modus-themes
+  :config
+  (load-theme 'modus-operandi t)
+  (setq modus-operandi-theme-slanted-constructs t)
+  (setq modus-operandi-theme-bold-constructs t))
+#+END_SRC
 * Core
+** Diff
+#+BEGIN_SRC emacs-lisp
+(use-package diff-mode)
+#+END_SRC
+
 ** Line numbers
 #+BEGIN_SRC emacs-lisp
 (column-number-mode)
@@ -151,7 +166,11 @@ The `no-littering` tries to keep `~/emacs.d./` clean of unwanted files
   (define-key evil-insert-state-map (kbd "C-h") 'evil-delete-backward-char-and-join)
 
   (evil-set-initial-state 'messages-buffer-mode 'normal)
-  (evil-set-initial-state 'dashboard-mode 'normal))
+  (evil-set-initial-state 'dashboard-mode 'normal)
+
+  ;; change color of search and replace
+  (set-face-attribute 'evil-ex-substitute-matches nil :inherit 'diff-indicator-changed)
+  (set-face-attribute 'evil-ex-substitute-replacement nil :inherit 'diff-indicator-added))
 
 (use-package evil-nerd-commenter
   :after evil
@@ -333,6 +352,42 @@ The `no-littering` tries to keep `~/emacs.d./` clean of unwanted files
   "pr" 'xref-find-references)
 #+END_SRC
 
+** Wgrep
+#+BEGIN_SRC emacs-lisp
+(use-package wgrep
+  :ensure t
+  ;; :commands
+  ;; wgrep-change-to-wgrep-mode
+  :bind (:map ivy-minibuffer-map
+	      ("C-c C-o" . 'tpanum/ivy-occur))
+  :config
+  (setq wgrep-auto-save-buffer t)
+  (add-hook 'ivy-occur-grep-mode-hook #'tpanum/ivy-occur-wgrep-hook))
+
+(defun tpanum/move-cursor-left-hook ()
+  (left-char 2)
+  (remove-hook 'minibuffer-setup-hook #'tpanum/move-cursor-left-hook))
+
+(defun tpanum/ivy-occur-wgrep-action ()
+  (with-current-buffer next-error-last-buffer
+    (add-hook 'minibuffer-setup-hook #'tpanum/move-cursor-left-hook)
+    (wgrep-change-to-wgrep-mode)
+    (evil-ex (concat "%s@" tpanum/last-rg-search-expression "@@g"))
+    (makunbound 'tpanum/last-rg-search-expression))
+  ;;
+  ;; (with-current-buffer next-error-last-buffer
+  ;; 		       )
+  )
+
+(defun tpanum/ivy-occur-wgrep-hook ()
+  (if (boundp 'tpanum/last-rg-search-expression)
+      (run-with-timer 0.8 nil 'tpanum/ivy-occur-wgrep-action)))
+
+(defun tpanum/ivy-occur ()
+  (interactive)
+  (setq tpanum/last-rg-search-expression ivy-text)
+  (ivy-occur))
+#+END_SRC
 ** Flymake
 #+BEGIN_SRC emacs-lisp
 (use-package flymake
@@ -341,27 +396,13 @@ The `no-littering` tries to keep `~/emacs.d./` clean of unwanted files
   (setcar flymake-error-bitmap 'exclamation-mark)
   (setcar flymake-warning-bitmap 'question-mark))
 #+END_SRC
-** Theme
-#+BEGIN_SRC emacs-lisp
-(use-package modus-themes
-  :config
-  (load-theme 'modus-operandi t)
-  (setq modus-operandi-theme-slanted-constructs t)
-  (setq modus-operandi-theme-bold-constructs t))
-#+END_SRC
-** Wgrep
-#+BEGIN_SRC emacs-lisp
-(use-package wgrep
-  :config
-  (setq wgrep-auto-save-buffer t))
-#+END_SRC
 * Programming Modes
 ** Org-mode
 #+BEGIN_SRC emacs-lisp
 (defun tpanum/org-mode-init ()
   (org-indent-mode)
   (setq evil-auto-indent nil)
-  (diminish org-indent-mode))
+  (diminish 'org-indent-mode))
 
 (use-package org
   :defer t
