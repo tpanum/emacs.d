@@ -14,4 +14,5 @@ jobs:
         emacs --version
 
     - name: Compile config
-      run: make compile
+      run: |
+        emacs -q --batch --eval "(require 'org) (org-babel-tangle-file 'init.org')"
