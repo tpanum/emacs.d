@@ -52,6 +52,21 @@ Enable use-package and add package repositories
 (use-package diminish)
 #+END_SRC
 
+*** Straight.el
+#+BEGIN_SRC emacs-lisp
+(defvar bootstrap-version)
+(let ((bootstrap-file
+       (expand-file-name "straight/repos/straight.el/bootstrap.el" user-emacs-directory))
+      (bootstrap-version 6))
+  (unless (file-exists-p bootstrap-file)
+    (with-current-buffer
+        (url-retrieve-synchronously
+         "https://raw.githubusercontent.com/radian-software/straight.el/develop/install.el"
+         'silent 'inhibit-cookies)
+      (goto-char (point-max))
+      (eval-print-last-sexp)))
+  (load bootstrap-file nil 'nomessage))
+#+END_SRC
 ** House keeping of .emacs.d.
 The `no-littering` tries to keep `~/emacs.d./` clean of unwanted files
 #+BEGIN_SRC emacs-lisp
@@ -167,6 +182,7 @@ The `no-littering` tries to keep `~/emacs.d./` clean of unwanted files
 
   (evil-set-initial-state 'messages-buffer-mode 'normal)
   (evil-set-initial-state 'dashboard-mode 'normal)
+  (evil-set-initial-state 'dired-mode 'emacs)
 
   ;; change color of search and replace
   (set-face-attribute 'evil-ex-substitute-matches nil :inherit 'diff-indicator-changed)
@@ -439,10 +455,28 @@ Black formatting
 (use-package dockerfile-mode
   :mode "Dockerfile\\'")
 #+END_SRC
+** Nix
+#+BEGIN_SRC emacs-lisp
+(use-package nix-mode
+  :mode "\\.nix\\'")
+#+END_SRC
 ** Protobuf
 #+BEGIN_SRC emacs-lisp
 (use-package protobuf-mode
   :mode ("\\.proto\\'" . protobuf-mode))
+#+END_SRC
+** Copilot
+#+BEGIN_SRC emacs-lisp
+(use-package copilot
+  :hook ((prog-mode) . copilot-mode)
+  :bind (:map copilot-mode-map
+	      ("<tab>" . 'copilot-accept-completion))
+  :straight (:host github :repo "zerolfx/copilot.el" :files ("dist" "*.el")))
+#+END_SRC
+** Go
+#+BEGIN_SRC emacs-lisp
+(use-package go-mode
+  :mode ("\\.go\\'" . go-mode))
 #+END_SRC
 * Finalization
 ** Garbage Collection
