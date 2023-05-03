@@ -1,0 +1,486 @@
+#+TITLE: Emacs Configuration
+#+AUTHOR: Thomas Kobber Panum
+#+PROPERTY: header-args :tangle yes
+#+STARTUP: overview
+
+* Preliminary
+** Garbage Collection
+Increase garbage collection threshold
+#+BEGIN_SRC emacs-lisp
+(setq gc-cons-threshold (* 128 1024 1024))
+#+END_SRC
+
+** Measure startup time
+Print message on startup that displays the startup time
+#+BEGIN_SRC emacs-lisp
+(defun tpanum/display-startup-time ()
+  (message "Emacs loaded in %s with %d garbage collections."
+	   (format "%.2f seconds"
+		   (float-time
+		    (time-subtract after-init-time before-init-time)))
+	   gcs-done))
+
+(add-hook 'emacs-startup-hook #'tpanum/display-startup-time)
+#+END_SRC
+
+** Native Compilation
+#+BEGIN_SRC emacs-lisp
+;; Silence compiler warnings as they can be pretty disruptive
+(setq comp-async-report-warnings-errors nil)
+#+END_SRC
+
+** Package Management
+Enable use-package and add package repositories
+#+BEGIN_SRC emacs-lisp
+(require 'package)
+
+(setq package-archives '(("melpa" . "https://melpa.org/packages/")
+			 ("org" . "https://orgmode.org/elpa/")
+			 ("elpa" . "https://elpa.gnu.org/packages/")))
+
+(package-initialize)
+(unless package-archive-contents
+  (package-refresh-contents))
+
+;; Initialize use-package on non-Linux platforms
+(unless (package-installed-p 'use-package)
+  (package-install 'use-package))
+
+(require 'use-package)
+(setq use-package-always-ensure t)
+
+(use-package diminish)
+#+END_SRC
+
+*** Straight.el
+#+BEGIN_SRC emacs-lisp
+(defvar bootstrap-version)
+(let ((bootstrap-file
+       (expand-file-name "straight/repos/straight.el/bootstrap.el" user-emacs-directory))
+      (bootstrap-version 6))
+  (unless (file-exists-p bootstrap-file)
+    (with-current-buffer
+        (url-retrieve-synchronously
+         "https://raw.githubusercontent.com/radian-software/straight.el/develop/install.el"
+         'silent 'inhibit-cookies)
+      (goto-char (point-max))
+      (eval-print-last-sexp)))
+  (load bootstrap-file nil 'nomessage))
+#+END_SRC
+** House keeping of .emacs.d.
+The `no-littering` tries to keep `~/emacs.d./` clean of unwanted files
+#+BEGIN_SRC emacs-lisp
+;; NOTE: If you want to move everything out of the ~/.emacs.d folder
+;; reliably, set `user-emacs-directory` before loading no-littering!
+(setq user-emacs-directory "~/.cache/emacs")
+
+(use-package no-littering)
+
+;; no-littering doesn't set this by default so we must place
+;; auto save files in the same path as it uses for sessions
+(setq auto-save-file-name-transforms
+      `((".*" ,(no-littering-expand-var-file-name "auto-save/") t)))
+#+END_SRC
+
+** Basic Appearance
+#+BEGIN_SRC emacs-lisp
+(setq inhibit-startup-message t)
+
+(scroll-bar-mode -1)        ; Disable visible scrollbar
+(tool-bar-mode -1)          ; Disable the toolbar
+(tooltip-mode -1)           ; Disable tooltips
+(set-fringe-mode 10)        ; Give some breathing room
+(menu-bar-mode -1)          ; Disable the menu bar
+(setq visible-bell nil)
+#+END_SRC
+
+** Theme
+#+BEGIN_SRC emacs-lisp
+(use-package modus-themes
+  :config
+  (load-theme 'modus-operandi t)
+  (setq modus-operandi-theme-slanted-constructs t)
+  (setq modus-operandi-theme-bold-constructs t))
+#+END_SRC
+* Core
+** Diff
+#+BEGIN_SRC emacs-lisp
+(use-package diff-mode)
+#+END_SRC
+
+** Line numbers
+#+BEGIN_SRC emacs-lisp
+(column-number-mode)
+(global-display-line-numbers-mode t)
+
+;; Disable line numbers for some modes
+(dolist (mode '(org-mode-hook
+		term-mode-hook
+		shell-mode-hook
+		treemacs-mode-hook
+		eshell-mode-hook))
+  (add-hook mode (lambda () (display-line-numbers-mode 0))))
+#+END_SRC
+
+** Fonts
+#+BEGIN_SRC emacs-lisp
+(defvar tpanum/config-path "~/.emacs.d/init.org")
+(defvar tpanum/default-font-size 130)
+(defvar tpanum/default-variable-font-size 130)
+
+(defun tpanum/font-available-p (font-name)
+  "Determine whether FONT-NAME is installed."
+  (when (find-font (font-spec :name font-name :weight 'normal :slant 'normal)) font-name))
+
+(use-package dash)
+
+(defvar tpanum/preferred-font
+  (-some #'tpanum/font-available-p
+	 '("Hasklig" "Hack" "Verdana" "Arial")))
+
+(set-face-attribute 'default nil :font tpanum/preferred-font :height tpanum/default-font-size)
+
+;; Set the fixed pitch face
+(set-face-attribute 'fixed-pitch nil :font tpanum/preferred-font :height tpanum/default-font-size)
+
+;; Set the variable pitch face
+(set-face-attribute 'variable-pitch nil :font tpanum/preferred-font :height tpanum/default-variable-font-size :weight 'regular)
+
+(when (string-equal "Hasklig" tpanum/preferred-font)
+  (use-package hasklig-mode
+    :hook prog-mode))
+#+END_SRC
+
+** Basic Keybindings
+#+BEGIN_SRC emacs-lisp
+(global-set-key (kbd "<escape>") 'keyboard-escape-quit)
+#+END_SRC
+
+** Evil Mode
+#+BEGIN_SRC emacs-lisp
+(use-package undo-tree
+  :init
+  (global-undo-tree-mode 1))
+
+(defun tpanum/prog-mode-word-def ()
+  (modify-syntax-entry ?_ "w"))
+
+(add-hook 'prog-mode-hook 'tpanum/prog-mode-word-def)
+
+(use-package evil
+  :init
+  (setq evil-want-integration t)
+  (setq evil-want-keybinding nil)
+  (setq evil-want-C-u-scroll t)
+  (setq evil-want-C-i-jump nil)
+  (setq evil-respect-visual-line-mode t)
+  (setq evil-undo-system 'undo-tree)
+  :config
+  (evil-mode 1)
+  (define-key evil-insert-state-map (kbd "C-g") 'evil-normal-state)
+  (define-key evil-insert-state-map (kbd "C-h") 'evil-delete-backward-char-and-join)
+
+  (evil-set-initial-state 'messages-buffer-mode 'normal)
+  (evil-set-initial-state 'dashboard-mode 'normal)
+  (evil-set-initial-state 'dired-mode 'emacs)
+
+  ;; change color of search and replace
+  (set-face-attribute 'evil-ex-substitute-matches nil :inherit 'diff-indicator-changed)
+  (set-face-attribute 'evil-ex-substitute-replacement nil :inherit 'diff-indicator-added))
+
+(use-package evil-nerd-commenter
+  :after evil
+  :config
+  (evilnc-default-hotkeys))
+#+END_SRC
+
+** General (Key Bindings)
+#+BEGIN_SRC emacs-lisp
+(defun tpanum/open-config ()
+  (interactive)
+  (find-file tpanum/config-path))
+
+(defun tpanum/compile-config ()
+  (interactive)
+  (org-babel-tangle-file tpanum/config-path))
+
+
+(defun tpanum/cycle-next-error ()
+  (interactive)
+  (if (bound-and-true-p flymake-mode)
+      (flymake-goto-next-error)
+    (condition-case nil (next-error)
+      (error (next-error 1 t)))))
+
+(use-package general
+  :config
+  (general-evil-setup t)
+
+  (general-create-definer tpanum/leader-key-def
+    :keymaps '(normal insert visual emacs)
+    :prefix "SPC"
+    :global-prefix "C-SPC")
+
+  (tpanum/leader-key-def
+    "f" 'find-file
+
+    "c"  '(:ignore t :which-key "Config")
+    "co" 'tpanum/open-config
+    "cc" 'tpanum/compile-config
+
+    "h"  '(:ignore t :which-key "Help")
+    "hf" 'describe-function
+    "hk" 'describe-key
+    "hm" 'describe-mode
+    "hv" 'describe-variable
+
+    "p"  '(:ignore t :which-key "Programming")
+    "pe" 'tpanum/cycle-next-error
+
+    "q" 'kill-this-buffer
+
+    "w"  '(:ignore t :which-key "Window")
+    "wo" 'other-window
+    "wd" 'delete-other-windows
+    "wsh" 'split-window-right
+    "wsv" 'split-window-below
+
+
+    "x"  '(:ignore t :which-key "Elisp Eval")
+    "xx" 'execute-extended-command
+    "xc" 'save-buffers-kill-terminal
+    "xe" 'eval-last-sexp))
+#+END_SRC
+
+** Modeline
+#+BEGIN_SRC emacs-lisp
+(use-package all-the-icons :defer t)
+
+(use-package moody
+  :defer t
+  :config
+  (setq x-underline-at-descent-line t)
+  (moody-replace-mode-line-buffer-identification)
+  (moody-replace-vc-mode))
+#+END_SRC
+
+** Ivy & Counsel
+#+BEGIN_SRC emacs-lisp
+(use-package ivy
+  :diminish
+  :init
+  (ivy-mode 1)
+  :bind (:map ivy-mode-map
+	      ("C-<return>" . 'ivy-immediate-done)
+	      :map ivy-minibuffer-map
+	      ("C-s" . 'tpanum/ivy-rg-search)
+	      ("<escape>" . 'minibuffer-keyboard-quit)
+	      ("<RET>" . 'ivy-alt-done))
+  :config
+  (defmacro minibuffer-quit-and-run (&rest body)
+    "Quit the minibuffer and run BODY afterwards."
+    `(progn
+       (run-at-time nil nil
+		    (lambda ()
+		      (put 'quit 'error-message "Quit")
+		      ,@body))
+       (minibuffer-keyboard-quit)))
+
+  (defun tpanum/ivy-rg-search ()
+    (interactive)
+    (minibuffer-quit-and-run
+     (let ((selected-candidate (concat (file-name-as-directory ivy--directory) (ivy-state-current ivy-last))))
+       (if (file-directory-p selected-candidate) (counsel-rg "" selected-candidate) (counsel-rg "" ivy--directory))))))
+
+(use-package flx  ;; Improves sorting for fuzzy-matched results
+  :after ivy
+  :defer t
+  :init
+  (setq ivy-flx-limit 10000))
+
+(use-package counsel
+  :demand t
+  :bind (("M-x" . counsel-M-x)
+	 ("C-x C-f" . counsel-find-file)))
+
+(use-package prescient
+  :after counsel
+  :config
+  (prescient-persist-mode 1))
+
+(use-package ivy-prescient
+  :after prescient
+  :config
+  (ivy-prescient-mode 1))
+
+(tpanum/leader-key-def
+  "f"  '(counsel-find-file :which-key "open file")
+  "b"  'ivy-switch-buffer)
+#+END_SRC
+** Snippets
+#+BEGIN_SRC emacs-lisp
+(use-package yasnippet
+  :hook ((prog-mode org-mode) . yas-minor-mode)
+  :config
+  (setq yas/snippet-dirs '("~/.emacs.d/snippets"))
+  (yas-reload-all))
+#+END_SRC
+
+** Eliminate Whitespace
+#+BEGIN_SRC emacs-lisp
+(use-package ws-butler
+  :hook (text-mode prog-mode))
+#+END_SRC
+** Smartparens
+#+BEGIN_SRC emacs-lisp
+(use-package smartparens
+  :hook (prog-mode . smartparens-mode))
+#+END_SRC
+
+** Rainbow Delimiters
+#+BEGIN_SRC emacs-lisp
+(use-package rainbow-delimiters
+  :hook (prog-mode . rainbow-delimiters-mode))
+#+END_SRC
+
+** Rainbow Mode
+#+BEGIN_SRC emacs-lisp
+(use-package rainbow-mode
+  :defer t
+  :hook (org-mode
+	 emacs-lisp-mode
+	 web-mode
+	 typescript-mode
+	 js2-mode))
+#+END_SRC
+
+** Language Server
+#+BEGIN_SRC emacs-lisp
+(use-package eglot
+  :defer t
+  :hook (python-mode . eglot-ensure)
+  :config
+  (add-to-list 'eglot-server-programs '(python-mode .
+						    ("pyright-langserver" "--stdio"))))
+
+(tpanum/leader-key-def
+  "pd" 'xref-find-definitions
+  "pr" 'xref-find-references)
+#+END_SRC
+
+** Wgrep
+#+BEGIN_SRC emacs-lisp
+(use-package wgrep
+  :ensure t
+  ;; :commands
+  ;; wgrep-change-to-wgrep-mode
+  :bind (:map ivy-minibuffer-map
+	      ("C-c C-o" . 'tpanum/ivy-occur))
+  :config
+  (setq wgrep-auto-save-buffer t)
+  (add-hook 'ivy-occur-grep-mode-hook #'tpanum/ivy-occur-wgrep-hook))
+
+(defun tpanum/move-cursor-left-hook ()
+  (left-char 2)
+  (remove-hook 'minibuffer-setup-hook #'tpanum/move-cursor-left-hook))
+
+(defun tpanum/ivy-occur-wgrep-action ()
+  (with-current-buffer next-error-last-buffer
+    (add-hook 'minibuffer-setup-hook #'tpanum/move-cursor-left-hook)
+    (wgrep-change-to-wgrep-mode)
+    (evil-ex (concat "%s@" tpanum/last-rg-search-expression "@@g"))
+    (makunbound 'tpanum/last-rg-search-expression))
+  ;;
+  ;; (with-current-buffer next-error-last-buffer
+  ;; 		       )
+  )
+
+(defun tpanum/ivy-occur-wgrep-hook ()
+  (if (boundp 'tpanum/last-rg-search-expression)
+      (run-with-timer 0.8 nil 'tpanum/ivy-occur-wgrep-action)))
+
+(defun tpanum/ivy-occur ()
+  (interactive)
+  (setq tpanum/last-rg-search-expression ivy-text)
+  (ivy-occur))
+#+END_SRC
+** Flymake
+#+BEGIN_SRC emacs-lisp
+(use-package flymake
+  :hook prog-mode
+  :config
+  (setcar flymake-error-bitmap 'exclamation-mark)
+  (setcar flymake-warning-bitmap 'question-mark))
+#+END_SRC
+* Programming Modes
+** Org-mode
+#+BEGIN_SRC emacs-lisp
+(defun tpanum/org-mode-init ()
+  (org-indent-mode)
+  (setq evil-auto-indent nil)
+  (diminish 'org-indent-mode))
+
+(use-package org
+  :defer t
+  :hook (org-mode . tpanum/org-mode-init)
+  :config
+  (progn
+    (setq org-src-preserve-indentation t
+	  org-src-fontify-natively t
+	  org-src-window-setup 'current-window)))
+#+END_SRC
+** Python
+#+BEGIN_SRC emacs-lisp
+(use-package python
+  :mode ("\\.py\\'" . python-mode))
+#+END_SRC
+
+Black formatting
+#+BEGIN_SRC emacs-lisp
+(use-package blacken
+  :hook (python-mode . blacken-mode))
+#+END_SRC
+*** JSON
+#+BEGIN_SRC emacs-lisp
+(use-package json-mode
+  :mode (("\\.json\\'" . json-mode)))
+#+END_SRC
+*** YAML
+#+BEGIN_SRC emacs-lisp
+(use-package yaml-mode
+  :mode (("\\.yml\\'" . yaml-mode)))
+#+END_SRC
+** Dockerfile
+#+BEGIN_SRC emacs-lisp
+(use-package dockerfile-mode
+  :mode "Dockerfile\\'")
+#+END_SRC
+** Nix
+#+BEGIN_SRC emacs-lisp
+(use-package nix-mode
+  :mode "\\.nix\\'")
+#+END_SRC
+** Protobuf
+#+BEGIN_SRC emacs-lisp
+(use-package protobuf-mode
+  :mode ("\\.proto\\'" . protobuf-mode))
+#+END_SRC
+** Copilot
+#+BEGIN_SRC emacs-lisp
+(use-package copilot
+  :hook ((prog-mode) . copilot-mode)
+  :bind (:map copilot-mode-map
+	      ("<tab>" . 'copilot-accept-completion))
+  :straight (:host github :repo "zerolfx/copilot.el" :files ("dist" "*.el")))
+#+END_SRC
+** Go
+#+BEGIN_SRC emacs-lisp
+(use-package go-mode
+  :mode ("\\.go\\'" . go-mode))
+#+END_SRC
+* Finalization
+** Garbage Collection
+Decrease garbage collection threshold
+#+BEGIN_SRC emacs-lisp
+  (setq gc-cons-threshold (* 12 1024 1024))
+#+END_SRC

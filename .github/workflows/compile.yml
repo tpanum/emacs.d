@@ -10,8 +10,9 @@ jobs:
       run: |
         sudo add-apt-repository ppa:kelleyk/emacs
         sudo apt-get update -y
-        sudo apt-get install -y emacs27 build-essential
+        sudo apt-get install -y emacs28 build-essential
         emacs --version
 
     - name: Compile config
-      run: make compile
+      run: |
+        emacs -q --batch --eval "(require 'org) (org-babel-tangle-file 'init.org')"
