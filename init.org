@@ -356,12 +356,16 @@ The `no-littering` tries to keep `~/emacs.d./` clean of unwanted files
 
 ** Language Server
 #+BEGIN_SRC emacs-lisp
-(use-package eglot
-  :defer t
-  :hook (python-mode . eglot-ensure)
-  :config
-  (add-to-list 'eglot-server-programs '(python-mode .
-						    ("pyright-langserver" "--stdio"))))
+;; (use-package eglot
+;;   :defer t
+;;   :hook (python-mode . eglot-ensure)
+;;   :config
+;;   (setq eglot-stay-out-of '(flycheck imenu)
+;; 	eglot-autoshutdown t)
+;;   (setq-default eglot-workspace-configuration
+;; 		'((:pyright . ((useLibraryCodeForTypes . t)))))
+;;   (add-to-list 'eglot-server-programs '(python-mode .
+;; 						    ("pyright-langserver" "--stdio"))))
 
 (tpanum/leader-key-def
   "pd" 'xref-find-definitions
@@ -406,11 +410,50 @@ The `no-littering` tries to keep `~/emacs.d./` clean of unwanted files
 #+END_SRC
 ** Flymake
 #+BEGIN_SRC emacs-lisp
-(use-package flymake
+;; (use-package flymake
+;;   :hook prog-mode
+;;   :config
+;;   (setcar flymake-error-bitmap 'exclamation-mark)
+;;   (setcar flymake-warning-bitmap 'question-mark))
+#+END_SRC
+
+** Reformatter
+#+BEGIN_SRC emacs-lisp
+(use-package reformatter
+  :hook
+  (python-mode . ruff-isort-on-save-mode)
+  (python-mode . ruff-format-on-save-mode)
+  :config
+  (reformatter-define ruff-format
+    :program "ruff"
+    :args `("format" "--stdin-filename", buffer-file-name "-"))
+  (reformatter-define ruff-isort
+    :program "ruff"
+    :args `("check" "--select" "I" "--fix" "--silent" "--stdin-filename", buffer-file-name "-")))
+#+END_SRC
+
+** Flycheck
+#+BEGIN_SRC emacs-lisp
+(use-package flycheck
   :hook prog-mode
   :config
-  (setcar flymake-error-bitmap 'exclamation-mark)
-  (setcar flymake-warning-bitmap 'question-mark))
+  (flycheck-define-error-level 'error
+    :severity 100
+    :overlay-category 'flycheck-error-overlay
+    :fringe-bitmap 'exclamation-mark
+    :fringe-face 'flycheck-fringe-error
+    :error-list-face 'flycheck-error-list-error)
+  (flycheck-define-error-level 'warning
+    :severity 10
+    :overlay-category 'flycheck-warning-overlay
+    :fringe-bitmap 'question-mark
+    :fringe-face 'flycheck-fringe-warning
+    :error-list-face 'flycheck-error-list-warning))
+
+(use-package flycheck-eglot
+  :after (flycheck eglot)
+  :config
+  (global-flycheck-eglot-mode 1))
 #+END_SRC
 * Programming Modes
 ** Org-mode
@@ -423,11 +466,30 @@ The `no-littering` tries to keep `~/emacs.d./` clean of unwanted files
 (use-package org
   :defer t
   :hook (org-mode . tpanum/org-mode-init)
+  :bind (:map org-mode-map
+	      ("C-x C-e" . 'tpanum/org-default-export))
   :config
   (progn
     (setq org-src-preserve-indentation t
 	  org-src-fontify-natively t
 	  org-src-window-setup 'current-window)))
+
+(setq tpanum/org-exporters
+      '(("latex" . org-latex-export-to-pdf)
+        ("beamer" . org-beamer-export-to-pdf)))
+
+(defun tpanum/org-get-default-exporter ()
+  (downcase (car (org-element-map
+		     (org-element-parse-buffer)
+		     'keyword (lambda (el)
+				(when (string-equal (org-element-property :key el) "DEFAULT_EXPORTER")
+				  (org-element-property :value el)))))))
+
+(defun tpanum/org-default-export ()
+  "Look for the property `DEFAULT_EXPORTER' within an org file, and select exporter based on `tpanum/org-exporters'"
+  (interactive)
+  (let ((exporter (cdr (assoc (tpanum/org-get-default-exporter) tpanum/org-exporters))))
+    (call-interactively exporter)))
 #+END_SRC
 ** Python
 #+BEGIN_SRC emacs-lisp
@@ -435,17 +497,50 @@ The `no-littering` tries to keep `~/emacs.d./` clean of unwanted files
   :mode ("\\.py\\'" . python-mode))
 #+END_SRC
 
-Black formatting
+*** Flycheck-ruff
 #+BEGIN_SRC emacs-lisp
-(use-package blacken
-  :hook (python-mode . blacken-mode))
+(flycheck-def-config-file-var flycheck-python-ruff-config python-ruff
+                              '("pyproject.toml" "ruff.toml" ".ruff.toml"))
+
+(flycheck-define-checker python-ruff
+  "A Python syntax and style checker using the ruff.
+To override the path to the ruff executable, set
+`flycheck-python-ruff-executable'.
+
+See URL `https://beta.ruff.rs/docs/'."
+  :command ("ruff"
+            "check"
+            (config-file "--config" flycheck-python-ruff-config)
+            "--output-format=text"
+            "--stdin-filename" source-original
+            "-")
+  :standard-input t
+  :error-filter (lambda (errors)
+                  (let ((errors (flycheck-sanitize-errors errors)))
+                    (seq-map #'flycheck-flake8-fix-error-level errors)))
+  :error-patterns
+  ((warning line-start
+            (file-name) ":" line ":" (optional column ":") " "
+            (id (one-or-more (any alpha)) (one-or-more digit)) " "
+            (message (one-or-more not-newline))
+            line-end))
+  :modes (python-mode python-ts-mode)
+  :next-checkers ((warning . python-mypy)))
+
+(defun tpanum/python-flycheck-setup ()
+  (progn
+    (flycheck-select-checker 'python-ruff)
+    (flycheck-add-next-checker 'python-ruff 'python-mypy)))
+
+(add-hook 'python-mode-hook 'tpanum/python-flycheck-setup)
 #+END_SRC
-*** JSON
+
+** JSON
 #+BEGIN_SRC emacs-lisp
 (use-package json-mode
   :mode (("\\.json\\'" . json-mode)))
 #+END_SRC
-*** YAML
+** YAML
 #+BEGIN_SRC emacs-lisp
 (use-package yaml-mode
   :mode (("\\.yml\\'" . yaml-mode)))
@@ -477,6 +572,24 @@ Black formatting
 #+BEGIN_SRC emacs-lisp
 (use-package go-mode
   :mode ("\\.go\\'" . go-mode))
+#+END_SRC
+** Markdown
+#+BEGIN_SRC emacs-lisp
+(use-package markdown-mode
+  :mode (("\\`README\\.md\\'" . gfm-mode)
+	 ("\\.md\\'" . markdown-mode)
+	 ("\\.markdown\\'" . markdown-mode)))
+#+END_SRC
+** Hugo
+#+BEGIN_SRC emacs-lisp
+(use-package ox-hugo
+  :after ox)
+
+(defun tpanum/ox-hugo-all-subtrees ()
+  (interactive)
+  (org-hugo-export-wim-to-md :all-subtrees))
+
+(add-to-list 'tpanum/org-exporters '("hugo" . tpanum/ox-hugo-all-subtrees))
 #+END_SRC
 * Finalization
 ** Garbage Collection
