@@ -502,6 +502,17 @@ The `no-littering` tries to keep `~/emacs.d./` clean of unwanted files
 (flycheck-def-config-file-var flycheck-python-ruff-config python-ruff
                               '("pyproject.toml" "ruff.toml" ".ruff.toml"))
 
+(flycheck-define-checker
+    python-mypy ""
+    :command ("mypy"
+              "--ignore-missing-imports"
+              source-original)
+    :error-patterns
+    ((error line-start (file-name) ":" line ": error:" (message) line-end))
+    :modes python-mode)
+
+(add-to-list 'flycheck-checkers 'python-mypy t)
+
 (flycheck-define-checker python-ruff
   "A Python syntax and style checker using the ruff.
 To override the path to the ruff executable, set
