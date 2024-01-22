@@ -136,7 +136,7 @@ The `no-littering` tries to keep `~/emacs.d./` clean of unwanted files
 
 (defvar tpanum/preferred-font
   (-some #'tpanum/font-available-p
-	 '("Hasklig" "Hack" "Verdana" "Arial")))
+	 '("Hasklig" "Hack" "Verdana" "Arial" "UbuntuMono")))
 
 (set-face-attribute 'default nil :font tpanum/preferred-font :height tpanum/default-font-size)
 
@@ -156,11 +156,19 @@ The `no-littering` tries to keep `~/emacs.d./` clean of unwanted files
 (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
 #+END_SRC
 
+** Backup Files
+#+BEGIN_SRC emacs-lisp
+(setq delete-auto-save-files t)
+(setq delete-old-versions t)
+(setq make-backup-files nil)
+#+END_SRC
+
 ** Evil Mode
 #+BEGIN_SRC emacs-lisp
 (use-package undo-tree
   :init
-  (global-undo-tree-mode 1))
+  (global-undo-tree-mode 1)
+  (setq undo-tree-history-directory-alist '(("." . "~/.emacs.d/undo"))))
 
 (defun tpanum/prog-mode-word-def ()
   (modify-syntax-entry ?_ "w"))
@@ -289,8 +297,7 @@ The `no-littering` tries to keep `~/emacs.d./` clean of unwanted files
   (defun tpanum/ivy-rg-search ()
     (interactive)
     (minibuffer-quit-and-run
-     (let ((selected-candidate (concat (file-name-as-directory ivy--directory) (ivy-state-current ivy-last))))
-       (if (file-directory-p selected-candidate) (counsel-rg "" selected-candidate) (counsel-rg "" ivy--directory))))))
+       (counsel-rg "" ivy--directory)))
 
 (use-package flx  ;; Improves sorting for fuzzy-matched results
   :after ivy
@@ -574,10 +581,10 @@ See URL `https://beta.ruff.rs/docs/'."
 ** Copilot
 #+BEGIN_SRC emacs-lisp
 (use-package copilot
+  :straight (:host github :repo "zerolfx/copilot.el" :files ("dist" "*.el"))
   :hook ((prog-mode) . copilot-mode)
   :bind (:map copilot-mode-map
-	      ("<tab>" . 'copilot-accept-completion))
-  :straight (:host github :repo "zerolfx/copilot.el" :files ("dist" "*.el")))
+	      ("<tab>" . 'copilot-accept-completion)))
 #+END_SRC
 ** Go
 #+BEGIN_SRC emacs-lisp
