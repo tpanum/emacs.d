@@ -363,6 +363,17 @@ The `no-littering` tries to keep `~/emacs.d./` clean of unwanted files
 
 ** Language Server
 #+BEGIN_SRC emacs-lisp
+(use-package eglot
+  :commands (eglot eglot-ensure)
+  :hook
+  (python-ts-mode . eglot-ensure)
+  :custom
+  (eglot-autoshutdown t)
+  (eglot-workspace-configuration
+   '(:pyright (:useLibraryCodeForTypes t :openFilesOnly :json-false))
+   (read-process-output-max (* 1024 1024))
+   (eglot-sync-connect 0))
+  )
 ;; (use-package eglot
 ;;   :defer t
 ;;   :hook (python-mode . eglot-ensure)
@@ -455,14 +466,53 @@ The `no-littering` tries to keep `~/emacs.d./` clean of unwanted files
     :overlay-category 'flycheck-warning-overlay
     :fringe-bitmap 'question-mark
     :fringe-face 'flycheck-fringe-warning
-    :error-list-face 'flycheck-error-list-warning))
+    :error-list-face 'flycheck-error-list-warning)
+  (setq flycheck-python-mypy-args '("--ignore-missing-imports")))
 
 (use-package flycheck-eglot
   :after (flycheck eglot)
   :config
   (global-flycheck-eglot-mode 1))
 #+END_SRC
+
+** Undo Tree
+#+BEGIN_SRC emacs-lisp
+(setq undo-tree-history-directory-alist '(("." . "~/.emacs.d/undo")))
+#+END_SRC
+
+** Backup Folder
+#+BEGIN_SRC emacs-lisp
+(setq backup-directory-alist '(("." . "~/.emacs.d/backup")))
+#+END_SRC
+
+
+
 * Programming Modes
+** Corfu
+#+BEGIN_SRC emacs-lisp
+(use-package corfu
+  :custom
+  (corfu-auto             t)
+  (corfu-auto-delay       0.1)
+  (corfu-auto-prefix      2)
+  (corfu-count            20)
+  (corfu-cycle            t)
+  (corfu-preselect        'first)
+  (corfu-preview-current  t)
+  (corfu-quit-at-boundary t)
+  (corfu-quit-no-match    t)
+  :bind(
+  :map corfu-map
+       ("<esc>" . corfu-quit)
+       ("C-f" . corfu-quick-complete)
+  )
+  :init
+  (global-corfu-mode)
+  (corfu-indexed-mode)
+  (corfu-history-mode)
+  (corfu-echo-mode)
+)
+#+END_SRC
 ** Org-mode
 #+BEGIN_SRC emacs-lisp
 (defun tpanum/org-mode-init ()
@@ -501,24 +551,16 @@ The `no-littering` tries to keep `~/emacs.d./` clean of unwanted files
 ** Python
 #+BEGIN_SRC emacs-lisp
 (use-package python
-  :mode ("\\.py\\'" . python-mode))
+  :mode ("\\.py\\'" . python-mode)
+  :hook ((python-mode . flyspell-prog-mode)
+	 (python-mode . superword-mode)
+	 (python-mode . hs-minor-mode)))
 #+END_SRC
 
 *** Flycheck-ruff
 #+BEGIN_SRC emacs-lisp
 (flycheck-def-config-file-var flycheck-python-ruff-config python-ruff
                               '("pyproject.toml" "ruff.toml" ".ruff.toml"))
-
-(flycheck-define-checker
-    python-mypy ""
-    :command ("mypy"
-              "--ignore-missing-imports"
-              source-original)
-    :error-patterns
-    ((error line-start (file-name) ":" line ": error:" (message) line-end))
-    :modes python-mode)
-
-(add-to-list 'flycheck-checkers 'python-mypy t)
 
 (flycheck-define-checker python-ruff
   "A Python syntax and style checker using the ruff.
@@ -586,6 +628,15 @@ See URL `https://beta.ruff.rs/docs/'."
   :bind (:map copilot-mode-map
 	      ("<tab>" . 'copilot-accept-completion)))
 #+END_SRC
+
+** Cody (AI Code Completion)
+#+BEGIN_SRC emacs-lisp
+(use-package cody
+  :hook ((prog-mode) . copilot-mode)
+  :bind (:map copilot-mode-map
+	      ("<tab>" . 'copilot-accept-completion))
+  :straight (:host github :repo "sourcegraph/emacs-cody" :files ("dist" "*.el")))
+#+END_SRC
 ** Go
 #+BEGIN_SRC emacs-lisp
 (use-package go-mode
@@ -609,9 +660,31 @@ See URL `https://beta.ruff.rs/docs/'."
 
 (add-to-list 'tpanum/org-exporters '("hugo" . tpanum/ox-hugo-all-subtrees))
 #+END_SRC
+** Rust
+#+BEGIN_SRC emacs-lisp
+(use-package rust-mode
+  :hook (rust-mode . lsp)
+  :bind
+  ("C-c g" . rust-run)
+  ("C-c t" . rust-test)
+  ("C-c b" . cargo-process-build)
+  :init
+  (setq compilation-error-regexp-alist-alist
+	(cons '(cargo "^\\([^ \n]+\\):\\([0-9]+\\):\\([0-9]+\\): \\([0-9]+\\):\\([0-9]+\\) \\(?:[Ee]rror\\|\\([Ww]arning\\)\\):" 1 (2 . 4) (3 . 5) (6))
+              compilation-error-regexp-alist-alist))
+  :config
+  (setq rust-format-on-save t))
+#+END_SRC
+** Bazel Mode
+#+BEGIN_SRC emacs-lisp
+(use-package bazel
+  :mode (("/BUILD\\(\\..*\\)?\\'" . bazel-mode)
+         ("/WORKSPACE\\'" . bazel-mode)
+         ("\\.bzl\\'" . bazel-mode)))
+#+END_SRC
 * Finalization
 ** Garbage Collection
 Decrease garbage collection threshold
 #+BEGIN_SRC emacs-lisp
-  (setq gc-cons-threshold (* 12 1024 1024))
+(setq gc-cons-threshold (* 12 1024 1024))
 #+END_SRC
